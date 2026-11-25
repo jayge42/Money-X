@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Money-X" />
+  <title>Money-X — Catatan Uang Pro</title>
+  <style>
+    :root {
+      --bg: #090b10;
+      --surface: #121620;
+      --surface-2: #191f2e;
+      --border: #252d3f;
+      --text: #f3f6fc;
+      --muted: #8f9bb3;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.14);
+      --green: #10b981;
+      --red: #f43f5e;
+      --amber: #f59e0b;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding-bottom: 88px;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(9, 11, 16, 0.9);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-badge {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      display: grid; place-items: center; font-weight: 800; font-size: 15px;
+    }
+    .brand-title { font-weight: 700; font-size: 16px; line-height: 1.1; }
+    .brand-sub { font-size: 11px; color: var(--muted); }
+
+    .top-actions { display: flex; gap: 6px; }
+    .icon-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .icon-btn:active { transform: scale(0.97); }
+
+    .container { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .portfolio-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .label-muted { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .curr-switcher { display: flex; align-items: center; gap: 6px; }
+    .curr-pill {
+      background: var(--accent-soft);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .portfolio-amount {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin: 4px 0 12px;
+      word-break: break-word;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .stat-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .stat-label { font-size: 11px; color: var(--muted); }
+    .stat-val { font-size: 14px; font-weight: 700; margin-top: 4px; }
+
+    .quick-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .btn {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+      background: var(--accent);
+    }
+    .btn-secondary {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-danger { background: rgba(244, 63, 94, 0.16); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.35); }
+    .btn-green { background: rgba(16, 185, 129, 0.16); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35); }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .asset-item, .tx-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+    }
+    .asset-item:last-child, .tx-item:last-child { border-bottom: none; padding-bottom: 2px; }
+    .asset-name { font-weight: 700; font-size: 14px; }
+    .asset-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .asset-right { text-align: right; }
+    .asset-main { font-weight: 700; font-size: 14px; }
+    .asset-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .grid-2x2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .menu-tile {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      text-align: left;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .menu-tile:hover { border-color: var(--accent); }
+    .menu-icon { font-size: 22px; margin-bottom: 8px; display: block; }
+    .menu-title { font-weight: 700; font-size: 14px; }
+    .menu-desc { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+    input, select, textarea {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 11px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    textarea { min-height: 76px; resize: vertical; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .filters .full { grid-column: 1 / -1; }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-left: 6px;
+    }
+    .tag-expense { background: rgba(244, 63, 94, 0.16); color: #fda4af; }
+    .tag-income { background: rgba(16, 185, 129, 0.16); color: #6ee7b7; }
+    .tag-liability { background: rgba(245, 158, 11, 0.16); color: #fcd34d; }
+    .tag-transfer { background: rgba(59, 130, 246, 0.18); color: #93c5fd; }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(12, 16, 24, 0.95);
+      backdrop-filter: blur(14px);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+      z-index: 30;
+    }
+    .nav-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 6px 4px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .nav-btn.active { color: #60a5fa; background: rgba(59, 130, 246, 0.12); }
+
+    .hidden { display: none !important; }
+    .toast {
+      position: fixed;
+      top: 66px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      padding: 9px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 60;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.45);
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-badge">MX</div>
+      <div>
+        <div class="brand-title">Money-X</div>
+        <div class="brand-sub" id="rateSummary">1 USD = 16,000 IDR · 1 JPY = 105 IDR</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" onclick="openRatesModal()">Kurs</button>
+      <button class="icon-btn" onclick="exportBackupJSON()">Backup</button>
+      <button class="icon-btn" onclick="document.getElementById('restoreFile').click()">Restore</button>
+      <input type="file" id="restoreFile" accept=".json" class="hidden" onchange="importBackupJSON(event)" />
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <div class="container">
+    <!-- TAB 1: DASHBOARD -->
+    <section id="tab-dashboard">
+      <div class="card">
+        <div class="portfolio-head">
+          <span class="label-muted">Total Portofolio Bersih</span>
+          <div class="curr-switcher">
+            <button class="icon-btn" onclick="cycleCurrency(-1)">‹</button>
+            <span class="curr-pill" id="activeCurrBadge">IDR</span>
+            <button class="icon-btn" onclick="cycleCurrency(1)">›</button>
+          </div>
+        </div>
+        <div class="portfolio-amount" id="portfolioTotal">Rp 0</div>
+
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">Expense / Bulan</div>
+            <div class="stat-val" id="statMonth" style="color:#fda4af;">Rp 0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Expense Hari Ini</div>
+            <div class="stat-val" id="statToday" style="color:#fcd34d;">Rp 0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Total Hutang</div>
+            <div class="stat-val" id="statDebt" style="color:#f87171;">Rp 0</div>
+          </div>
+        </div>
+
+        <div class="quick-row">
+          <button class="btn" onclick="openQuickForm('Expense')">+ Catat Pengeluaran</button>
+          <button class="btn btn-secondary" onclick="openQuickForm('Transfer')">⇄ Transfer / Valas</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <span>Daftar Aset & Akun</span>
+          <button class="icon-btn" onclick="openQuickForm('Aset')">+ Aset</button>
+        </div>
+        <div id="assetList"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <span>Riwayat & Pencarian</span>
+          <button class="icon-btn" onclick="resetFilters()">Reset</button>
+        </div>
+
+        <div class="filters">
+          <input type="search" id="searchInput" class="full" placeholder="Cari catatan, kategori, barang, atau aset..." oninput="renderAll()" />
+          <select id="typeFilter" onchange="renderAll()">
+            <option value="ALL">Semua Tipe</option>
+            <option value="Expense">Expense</option>
+            <option value="Income">Income</option>
+            <option value="Liability">Liability</option>
+            <option value="Transfer">Transfer</option>
+          </select>
+          <select id="currFilter" onchange="renderAll()">
+            <option value="ALL">Semua Mata Uang</option>
+            <option value="IDR">IDR</option>
+            <option value="JPY">JPY</option>
+            <option value="USD">USD</option>
+          </select>
+          <input type="date" id="dateFrom" onchange="renderAll()" />
+          <input type="date" id="dateTo" onchange="renderAll()" />
+        </div>
+
+        <div id="txList"></div>
+      </div>
+    </section>
+
+    <!-- TAB 2: GENERAL -->
+    <section id="tab-general" class="hidden">
+      <div class="grid-2x2" style="margin-bottom:14px;">
+        <button class="menu-tile" onclick="exportReportCSV()">
+          <span class="menu-icon">📊</span>
+          <div class="menu-title">Export Report CSV</div>
+          <div class="menu-desc">Unduh rekap transaksi untuk Google Sheets</div>
+        </button>
+        <button class="menu-tile" onclick="exportReportPrintable()">
+          <span class="menu-icon">🖨️</span>
+          <div class="menu-title">Cetak / Simpan PDF</div>
+          <div class="menu-desc">Buka tampilan cetak ringkasan bulanan</div>
+        </button>
+        <button class="menu-tile" onclick="openRatesModal()">
+          <span class="menu-icon">💱</span>
+          <div class="menu-title">Pengaturan Kurs</div>
+          <div class="menu-desc">Atur nilai tukar IDR, JPY, dan USD</div>
+        </button>
+        <button class="menu-tile" onclick="resetDemoData()">
+          <span class="menu-icon">🔄</span>
+          <div class="menu-title">Reset Data Awal</div>
+          <div class="menu-desc">Kembalikan akun & kurs bawaan awal</div>
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <span>Catatan Barang Belanjaan Bulanan</span>
+          <span class="label-muted" id="itemCountBadge">0 item</span>
+        </div>
+        <p class="asset-meta" style="margin-top:0;margin-bottom:10px;">
+          Pisahkan nama barang dengan koma saat input Expense (contoh: <em>Beras 5kg, Telur 1 pack, Minyak goreng</em>) agar terekap di sini.
+        </p>
+        <div id="groceryList"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: MENU INPUT -->
+    <section id="tab-input" class="hidden">
+      <div class="grid-2x2" style="margin-bottom:14px;">
+        <button class="menu-tile" onclick="openQuickForm('Expense')">
+          <span class="menu-icon">💸</span>
+          <div class="menu-title">Input Expense</div>
+          <div class="menu-desc">Catat pengeluaran & potong saldo akun</div>
+        </button>
+        <button class="menu-tile" onclick="openQuickForm('Income')">
+          <span class="menu-icon">💰</span>
+          <div class="menu-title">Input Income</div>
+          <div class="menu-desc">Catat pemasukan & tambah saldo akun</div>
+        </button>
+        <button class="menu-tile" onclick="openQuickForm('Transfer')">
+          <span class="menu-icon">⇄</span>
+          <div class="menu-title">Transfer / Valas</div>
+          <div class="menu-desc">Pindah saldo antar-akun lintas kurs</div>
+        </button>
+        <button class="menu-tile" onclick="openQuickForm('Liability')">
+          <span class="menu-icon">🧾</span>
+          <div class="menu-title">Input Liability</div>
+          <div class="menu-desc">Catat hutang atau tagihan berjalan</div>
+        </button>
+      </div>
+
+      <div class="card" id="formCard">
+        <div class="section-title">
+          <span id="formTitle">Form Input Expense</span>
+          <button class="icon-btn" id="cancelEditBtn" class="hidden" onclick="resetForm()">Batal</button>
+        </div>
+
+        <form onsubmit="handleFormSubmit(event)">
+          <input type="hidden" id="editId" />
+
+          <div class="form-group">
+            <label for="fType">Jenis Transaksi</label>
+            <select id="fType" onchange="syncFormFields()">
+              <option value="Expense">Expense (Pengeluaran)</option>
+              <option value="Income">Income (Pemasukan)</option>
+              <option value="Transfer">Transfer (Antar Aset / Valas)</option>
+              <option value="Liability">Liability (Hutang)</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="groupCategory">
+            <label for="fCategory">Kategori</label>
+            <input type="text" id="fCategory" placeholder="Contoh: Makanan, Transport, Gaji, Cicilan" required />
+          </div>
+
+          <div class="form-group" id="groupSource">
+            <label for="fSource">Sumber Dana / Akun</label>
+            <select id="fSource" onchange="autoMatchCurrency()"></select>
+          </div>
+
+          <div class="form-group hidden" id="groupTarget">
+            <label for="fTarget">Tujuan Transfer</label>
+            <select id="fTarget"></select>
+          </div>
+
+          <div class="form-group">
+            <label for="fCurr">Mata Uang</label>
+            <select id="fCurr">
+              <option value="IDR">IDR</option>
+              <option value="JPY">JPY</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="fAmount">Nominal</label>
+            <input type="number" step="any" id="fAmount" placeholder="0" required />
+          </div>
+
+          <div class="form-group" id="groupTargetAmount" class="hidden">
+            <label for="fTargetAmount">Nominal Diterima di Akun Tujuan (kosongkan untuk konversi otomatis)</label>
+            <input type="number" step="any" id="fTargetAmount" placeholder="Otomatis sesuai kurs" />
+          </div>
+
+          <div class="form-group">
+            <label for="fDate">Tanggal</label>
+            <input type="date" id="fDate" required />
+          </div>
+
+          <div class="form-group">
+            <label for="fNote">Catatan / Rincian</label>
+            <input type="text" id="fNote" placeholder="Keterangan singkat transaksi" />
+          </div>
+
+          <div class="form-group" id="groupItems">
+            <label for="fItems">Daftar Barang Belanjaan (opsional, pisahkan dengan koma)</label>
+            <textarea id="fItems" placeholder="Contoh: Beras, Telur, Sayur, Royco"></textarea>
+          </div>
+
+          <button type="submit" class="btn" id="submitBtn">Simpan Transaksi</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <span>Tambah / Koreksi Akun Aset</span>
+        </div>
+        <form onsubmit="handleAssetSubmit(event)">
+          <div class="form-group">
+            <label for="aName">Nama Aset</label>
+            <input type="text" id="aName" placeholder="Contoh: BLU BCA, PayPay / Cash JPY, BIBIT" required />
+          </div>
+          <div class="form-group">
+            <label for="aCurr">Mata Uang Aset</label>
+            <select id="aCurr">
+              <option value="IDR">IDR</option>
+              <option value="JPY">JPY</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="aBalance">Saldo Awal / Saat Ini</label>
+            <input type="number" step="any" id="aBalance" placeholder="0" required />
+          </div>
+          <button type="submit" class="btn btn-green">Simpan Aset</button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <!-- MODAL KURS -->
+  <div id="ratesModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;">
+    <div class="card" style="width:100%;max-width:420px;margin:0;">
+      <div class="section-title">
+        <span>Pengaturan Kurs ke IDR</span>
+        <button class="icon-btn" onclick="closeRatesModal()">✕</button>
+      </div>
+      <div class="form-group">
+        <label for="rUsd">1 USD = berapa IDR</label>
+        <input type="number" step="any" id="rUsd" />
+      </div>
+      <div class="form-group">
+        <label for="rJpy">1 JPY = berapa IDR</label>
+        <input type="number" step="any" id="rJpy" />
+      </div>
+      <button class="btn" onclick="saveRates()">Simpan Kurs</button>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-dashboard" onclick="switchTab('dashboard')">
+      <span>🏠</span>
+      <span>Dashboard</span>
+    </button>
+    <button class="nav-btn" id="nav-general" onclick="switchTab('general')">
+      <span>📁</span>
+      <span>General</span>
+    </button>
+    <button class="nav-btn" id="nav-input" onclick="switchTab('input')">
+      <span>➕</span>
+      <span>Menu Input</span>
+    </button>
+  </nav>
+
+  <script>
+    const STORAGE_KEY = 'money_x_pro_state_v1';
+    const CURRENCIES = ['IDR', 'JPY', 'USD'];
+
+    const DEFAULT_STATE = {
+      displayCurrency: 'IDR',
+      ratesToIDR: { IDR: 1, JPY: 105, USD: 16000 },
+      assets: [
+        { id: 'AST-001', name: 'BIBIT', currency: 'IDR', balance: 8769000 },
+        { id: 'AST-002', name: 'DARURAT', currency: 'IDR', balance: 0 },
+        { id: 'AST-003', name: 'GOLD', currency: 'IDR', balance: 870000 },
+        { id: 'AST-004', name: 'BLU BCA', currency: 'IDR', balance: 24981702 },
+        { id: 'AST-005', name: 'PayPay / Cash JPY', currency: 'JPY', balance: 225150 },
+        { id: 'AST-006', name: 'Wise USD', currency: 'USD', balance: 150 }
+      ],
+      transactions: [],
+      groceries: []
+    };
+
+    let state = loadState();
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return structuredClone(DEFAULT_STATE);
+        const parsed = JSON.parse(raw);
+        return {
+          ...structuredClone(DEFAULT_STATE),
+          ...parsed,
+          ratesToIDR: { ...DEFAULT_STATE.ratesToIDR, ...(parsed.ratesToIDR || {}) }
+        };
+      } catch {
+        return structuredClone(DEFAULT_STATE);
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => el.classList.add('hidden'), 2400);
+    }
+
+    function convertCurrency(amount, fromCurr, toCurr) {
+      const num = Number(amount) || 0;
+      const fromRate = state.ratesToIDR[fromCurr] || 1;
+      const toRate = state.ratesToIDR[toCurr] || 1;
+      const inIDR = num * fromRate;
+      return inIDR / toRate;
+    }
+
+    function formatMoney(amount, curr = state.displayCurrency) {
+      const val = Number(amount) || 0;
+      if (curr === 'IDR') {
+        return 'Rp ' + Math.round(val).toLocaleString('id-ID');
+      }
+      if (curr === 'JPY') {
+        return '¥' + Math.round(val).toLocaleString('en-US');
+      }
+      return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function cycleCurrency(step) {
+      const idx = CURRENCIES.indexOf(state.displayCurrency);
+      const nextIdx = (idx + step + CURRENCIES.length) % CURRENCIES.length;
+      state.displayCurrency = CURRENCIES[nextIdx];
+      saveState();
+      renderAll();
+    }
+
+    function switchTab(tab) {
+      ['dashboard', 'general', 'input'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
+        document.getElementById('nav-' + t).classList.toggle('active', t === tab);
+      });
+      renderAll();
+    }
+
+    function todayISO() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function currentMonthPrefix() {
+      return new Date().toISOString().slice(0, 7);
+    }
+
+    function openQuickForm(type) {
+      if (type === 'Aset') {
+        switchTab('input');
+        document.getElementById('aName').focus();
+        return;
+      }
+      switchTab('input');
+      document.getElementById('editId').value = '';
+      document.getElementById('fType').value = type;
+      document.getElementById('fDate').value = todayISO();
+      document.getElementById('fAmount').value = '';
+      document.getElementById('fTargetAmount').value = '';
+      document.getElementById('fNote').value = '';
+      document.getElementById('fItems').value = '';
+      document.getElementById('fCategory').value = type === 'Transfer' ? 'Transfer Antar Aset' : '';
+      syncFormFields();
+      autoMatchCurrency();
+    }
+
+    function resetForm() {
+      document.getElementById('editId').value = '';
+      document.getElementById('fType').value = 'Expense';
+      document.getElementById('fCategory').value = '';
+      document.getElementById('fAmount').value = '';
+      document.getElementById('fTargetAmount').value = '';
+      document.getElementById('fDate').value = todayISO();
+      document.getElementById('fNote').value = '';
+      document.getElementById('fItems').value = '';
+      document.getElementById('cancelEditBtn').classList.add('hidden');
+      document.getElementById('submitBtn').textContent = 'Simpan Transaksi';
+      syncFormFields();
+    }
+
+    function syncFormFields() {
+      const type = document.getElementById('fType').value;
+      const isTransfer = type === 'Transfer';
+      document.getElementById('groupTarget').classList.toggle('hidden', !isTransfer);
+      document.getElementById('groupTargetAmount').classList.toggle('hidden', !isTransfer);
+      document.getElementById('groupItems').classList.toggle('hidden', type !== 'Expense');
+      document.getElementById('formTitle').textContent = 'Form Input ' + type;
+    }
+
+    function autoMatchCurrency() {
+      const sourceId = document.getElementById('fSource').value;
+      const asset = state.assets.find(a => a.id === sourceId);
+      if (asset) {
+        document.getElementById('fCurr').value = asset.currency;
+      }
+    }
+
+    function populateAssetSelects() {
+      const srcSel = document.getElementById('fSource');
+      const tgtSel = document.getElementById('fTarget');
+      const prevSrc = srcSel.value;
+      const prevTgt = tgtSel.value;
+
+      const optionsHtml = state.assets
+        .map(a => `<option value="${a.id}">${escapeHtml(a.name)} (${a.currency})</option>`)
+        .join('');
+
+      srcSel.innerHTML = optionsHtml;
+      tgtSel.innerHTML = optionsHtml;
+
+      if (prevSrc && state.assets.some(a => a.id === prevSrc)) srcSel.value = prevSrc;
+      if (prevTgt && state.assets.some(a => a.id === prevTgt)) tgtSel.value = prevTgt;
+      else if (state.assets.length > 1) tgtSel.value = state.assets[1].id;
+    }
+
+    function applyTransactionEffect(tx, sign = 1) {
+      const amt = Number(tx.amount) || 0;
+      const src = state.assets.find(a => a.id === tx.sourceAssetId);
+      const tgt = state.assets.find(a => a.id === tx.targetAssetId);
+
+      if (tx.type === 'Expense') {
+        if (src) {
+          const delta = convertCurrency(amt, tx.currency, src.currency);
+          src.balance = (Number(src.balance) || 0) - sign * delta;
+        }
+      } else if (tx.type === 'Income') {
+        if (src) {
+          const delta = convertCurrency(amt, tx.currency, src.currency);
+          src.balance = (Number(src.balance) || 0) + sign * delta;
+        }
+      } else if (tx.type === 'Transfer') {
+        if (src) {
+          const outDelta = convertCurrency(amt, tx.currency, src.currency);
+          src.balance = (Number(src.balance) || 0) - sign * outDelta;
+        }
+        if (tgt) {
+          const receivedInTxCurr = tx.targetAmount && Number(tx.targetAmount) > 0
+            ? Number(tx.targetAmount)
+            : amt;
+          const inDelta = convertCurrency(receivedInTxCurr, tx.currency, tgt.currency);
+          tgt.balance = (Number(tgt.balance) || 0) + sign * inDelta;
+        }
+      }
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      const editId = document.getElementById('editId').value;
+      const type = document.getElementById('fType').value;
+      const category = document.getElementById('fCategory').value.trim() || type;
+      const sourceAssetId = document.getElementById('fSource').value;
+      const targetAssetId = document.getElementById('fTarget').value;
+      const currency = document.getElementById('fCurr').value;
+      const amount = Number(document.getElementById('fAmount').value);
+      const targetAmountRaw = document.getElementById('fTargetAmount').value;
+      const targetAmount = targetAmountRaw ? Number(targetAmountRaw) : null;
+      const date = document.getElementById('fDate').value || todayISO();
+      const note = document.getElementById('fNote').value.trim();
+      const rawItems = document.getElementById('fItems').value.trim();
+
+      if (!amount || amount <= 0) {
+        showToast('Nominal harus lebih dari 0');
+        return;
+      }
+      if (type === 'Transfer' && sourceAssetId === targetAssetId) {
+        showToast('Akun asal dan tujuan harus berbeda');
+        return;
+      }
+
+      if (editId) {
+        const idx = state.transactions.findIndex(t => t.id === editId);
+        if (idx !== -1) {
+          applyTransactionEffect(state.transactions[idx], -1);
+          const updated = {
+            ...state.transactions[idx],
+            type, category, sourceAssetId, targetAssetId,
+            currency, amount, targetAmount, date, note
+          };
+          applyTransactionEffect(updated, 1);
+          state.transactions[idx] = updated;
+        }
+        showToast('Transaksi diperbarui');
+      } else {
+        const tx = {
+          id: 'TX-' + Date.now(),
+          type, category, sourceAssetId, targetAssetId,
+          currency, amount, targetAmount, date, note
+        };
+        applyTransactionEffect(tx, 1);
+        state.transactions.unshift(tx);
+
+        if (type === 'Expense' && rawItems) {
+          const items = rawItems.split(',').map(s => s.trim()).filter(Boolean);
+          items.forEach(itemName => {
+            state.groceries.unshift({
+              id: 'ITM-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+              name: itemName,
+              category,
+              date,
+              currency,
+              amount: amount / items.length
+            });
+          });
+        }
+        showToast('Transaksi tersimpan');
+      }
+
+      saveState();
+      resetForm();
+      switchTab('dashboard');
+    }
+
+    function editTransaction(id) {
+      const tx = state.transactions.find(t => t.id === id);
+      if (!tx) return;
+      switchTab('input');
+      document.getElementById('editId').value = tx.id;
+      document.getElementById('fType').value = tx.type;
+      document.getElementById('fCategory').value = tx.category;
+      document.getElementById('fSource').value = tx.sourceAssetId || '';
+      document.getElementById('fTarget').value = tx.targetAssetId || '';
+      document.getElementById('fCurr').value = tx.currency;
+      document.getElementById('fAmount').value = tx.amount;
+      document.getElementById('fTargetAmount').value = tx.targetAmount || '';
+      document.getElementById('fDate').value = tx.date;
+      document.getElementById('fNote').value = tx.note || '';
+      document.getElementById('cancelEditBtn').classList.remove('hidden');
+      document.getElementById('submitBtn').textContent = 'Update Transaksi';
+      syncFormFields();
+    }
+
+    function deleteTransaction(id) {
+      const idx = state.transactions.findIndex(t => t.id === id);
+      if (idx === -1) return;
+      applyTransactionEffect(state.transactions[idx], -1);
+      state.transactions.splice(idx, 1);
+      saveState();
+      renderAll();
+      showToast('Transaksi dihapus');
+    }
+
+    function handleAssetSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('aName').value.trim();
+      const currency = document.getElementById('aCurr').value;
+      const balance = Number(document.getElementById('aBalance').value) || 0;
+      if (!name) return;
+
+      const existing = state.assets.find(a => a.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
+        existing.currency = currency;
+        existing.balance = balance;
+        showToast('Saldo aset diperbarui');
+      } else {
+        state.assets.push({
+          id: 'AST-' + (state.assets.length + 1).toString().padStart(3, '0'),
+          name,
+          currency,
+          balance
+        });
+        showToast('Aset baru ditambahkan');
+      }
+
+      document.getElementById('aName').value = '';
+      document.getElementById('aBalance').value = '';
+      saveState();
+      renderAll();
+    }
+
+    function openRatesModal() {
+      document.getElementById('rUsd').value = state.ratesToIDR.USD;
+      document.getElementById('rJpy').value = state.ratesToIDR.JPY;
+      document.getElementById('ratesModal').classList.remove('hidden');
+    }
+
+    function closeRatesModal() {
+      document.getElementById('ratesModal').classList.add('hidden');
+    }
+
+    function saveRates() {
+      const usd = Number(document.getElementById('rUsd').value);
+      const jpy = Number(document.getElementById('rJpy').value);
+      if (usd > 0) state.ratesToIDR.USD = usd;
+      if (jpy > 0) state.ratesToIDR.JPY = jpy;
+      saveState();
+      closeRatesModal();
+      renderAll();
+      showToast('Kurs diperbarui');
+    }
+
+    function resetFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('typeFilter').value = 'ALL';
+      document.getElementById('currFilter').value = 'ALL';
+      document.getElementById('dateFrom').value = '';
+      document.getElementById('dateTo').value = '';
+      renderAll();
+    }
+
+    function resetDemoData() {
+      if (!confirm('Reset aset dan kurs ke bawaan awal?')) return;
+      state = structuredClone(DEFAULT_STATE);
+      saveState();
+      renderAll();
+      showToast('Data awal dipulihkan');
+    }
+
+    function exportBackupJSON() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `money-x-backup-${todayISO()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Backup JSON diunduh');
+    }
+
+    function importBackupJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!Array.isArray(data.assets) || !Array.isArray(data.transactions)) {
+            showToast('Format file backup tidak valid');
+            return;
+          }
+          state = {
+            ...structuredClone(DEFAULT_STATE),
+            ...data,
+            ratesToIDR: { ...DEFAULT_STATE.ratesToIDR, ...(data.ratesToIDR || {}) }
+          };
+          saveState();
+          renderAll();
+          showToast('Backup berhasil dipulihkan');
+        } catch {
+          showToast('Gagal membaca file JSON');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    function exportReportCSV() {
+      const headers = ['ID', 'Tanggal', 'Tipe', 'Kategori', 'Mata_Uang', 'Nominal', 'Catatan'];
+      const rows = state.transactions.map(t => [
+        t.id, t.date, t.type, t.category, t.currency, t.amount, (t.note || '').replace(/,/g, ';')
+      ]);
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `money-x-report-${todayISO()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Report CSV diunduh');
+    }
+
+    function exportReportPrintable() {
+      window.print();
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    function renderAll() {
+      const disp = state.displayCurrency;
+      document.getElementById('activeCurrBadge').textContent = disp;
+      document.getElementById('rateSummary').textContent =
+        `1 USD = ${Number(state.ratesToIDR.USD).toLocaleString('id-ID')} IDR · 1 JPY = ${Number(state.ratesToIDR.JPY).toLocaleString('id-ID')} IDR`;
+
+      const totalPortfolio = state.assets.reduce((sum, a) => {
+        return sum + convertCurrency(a.balance, a.currency, disp);
+      }, 0);
+
+      const monthPrefix = currentMonthPrefix();
+      const today = todayISO();
+
+      const monthExpense = state.transactions
+        .filter(t => t.type === 'Expense' && (t.date || '').startsWith(monthPrefix))
+        .reduce((sum, t) => sum + convertCurrency(t.amount, t.currency, disp), 0);
+
+      const todayExpense = state.transactions
+        .filter(t => t.type === 'Expense' && t.date === today)
+        .reduce((sum, t) => sum + convertCurrency(t.amount, t.currency, disp), 0);
+
+      const totalDebt = state.transactions
+        .filter(t => t.type === 'Liability')
+        .reduce((sum, t) => sum + convertCurrency(t.amount, t.currency, disp), 0);
+
+      document.getElementById('portfolioTotal').textContent = formatMoney(totalPortfolio, disp);
+      document.getElementById('statMonth').textContent = formatMoney(monthExpense, disp);
+      document.getElementById('statToday').textContent = formatMoney(todayExpense, disp);
+      document.getElementById('statDebt').textContent = formatMoney(totalDebt, disp);
+
+      const assetListEl = document.getElementById('assetList');
+      if (!state.assets.length) {
+        assetListEl.innerHTML = `<div class="asset-meta">Belum ada aset terdaftar.</div>`;
+      } else {
+        assetListEl.innerHTML = state.assets.map(a => {
+          const converted = convertCurrency(a.balance, a.currency, disp);
+          return `
+            <div class="asset-item">
+              <div>
+                <div class="asset-name">${escapeHtml(a.name)}</div>
+                <div class="asset-meta">${a.id} · Akun ${a.currency}</div>
+              </div>
+              <div class="asset-right">
+                <div class="asset-main">${formatMoney(a.balance, a.currency)}</div>
+                <div class="asset-sub">${a.currency !== disp ? '≈ ' + formatMoney(converted, disp) : '&nbsp;'}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      const typeF = document.getElementById('typeFilter').value;
+      const currF = document.getElementById('currFilter').value;
+      const fromD = document.getElementById('dateFrom').value;
+      const toD = document.getElementById('dateTo').value;
+
+      const filteredTx = state.transactions.filter(t => {
+        if (typeF !== 'ALL' && t.type !== typeF) return false;
+        if (currF !== 'ALL' && t.currency !== currF) return false;
+        if (fromD && t.date < fromD) return false;
+        if (toD && t.date > toD) return false;
+        if (q) {
+          const srcName = (state.assets.find(a => a.id === t.sourceAssetId)?.name || '').toLowerCase();
+          const hay = `${t.category} ${t.note || ''} ${t.type} ${srcName}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+
+      const txListEl = document.getElementById('txList');
+      if (!filteredTx.length) {
+        txListEl.innerHTML = `<div class="asset-meta">Belum ada transaksi sesuai filter.</div>`;
+      } else {
+        txListEl.innerHTML = filteredTx.map(t => {
+          const tagClass = `tag-${t.type.toLowerCase()}`;
+          const srcName = state.assets.find(a => a.id === t.sourceAssetId)?.name || '-';
+          return `
+            <div class="tx-item">
+              <div>
+                <div class="asset-name">
+                  ${escapeHtml(t.category)}
+                  <span class="tag ${tagClass}">${t.type}</span>
+                </div>
+                <div class="asset-meta">${t.date} · ${escapeHtml(srcName)}${t.note ? ' · ' + escapeHtml(t.note) : ''}</div>
+              </div>
+              <div class="asset-right">
+                <div class="asset-main">${formatMoney(t.amount, t.currency)}</div>
+                <div style="margin-top:4px;display:flex;gap:6px;justify-content:flex-end;">
+                  <button class="icon-btn" onclick="editTransaction('${t.id}')">Edit</button>
+                  <button class="icon-btn" style="color:#fda4af;" onclick="deleteTransaction('${t.id}')">Hapus</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const grocEl = document.getElementById('groceryList');
+      document.getElementById('itemCountBadge').textContent = `${state.groceries.length} item`;
+      if (!state.groceries.length) {
+        grocEl.innerHTML = `<div class="asset-meta">Belum ada item belanjaan tercatat.</div>`;
+      } else {
+        grocEl.innerHTML = state.groceries.slice(0, 30).map(g => `
+          <div class="tx-item">
+            <div>
+              <div class="asset-name">${escapeHtml(g.name)}</div>
+              <div class="asset-meta">${g.date} · ${escapeHtml(g.category)}</div>
+            </div>
+            <div class="asset-main">${formatMoney(g.amount, g.currency)}</div>
+          </div>
+        `).join('');
+      }
+
+      populateAssetSelects();
+    }
+
+    document.getElementById('fDate').value = todayISO();
+    renderAll();
+  </script>
+</body>
+</html>
