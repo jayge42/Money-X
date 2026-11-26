@@ -194,6 +194,19 @@
       color: var(--text);
     }
 
+    .alert-banner {
+      background: rgba(251, 146, 60, 0.12);
+      border: 1px solid rgba(251, 146, 60, 0.38);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+    .alert-banner.ok {
+      background: var(--accent-soft);
+      border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+
     .budget-block { margin-bottom: 12px; }
     .budget-block:last-child { margin-bottom: 0; }
     .budget-meta {
@@ -491,6 +504,7 @@
       </div>
     </div>
     <div class="top-actions">
+      <button class="icon-btn" id="btnPrivacyMask" onclick="togglePrivacyMask()" title="Sembunyikan Saldo">👁</button>
       <button class="icon-btn" onclick="openBudgetModal()">Budget</button>
       <button class="icon-btn" onclick="openThemeModal()">Tema & FX</button>
       <button class="icon-btn" onclick="openSyncModal()">Cloud</button>
@@ -506,6 +520,8 @@
   <div class="container">
     <!-- TAB 1: DASHBOARD -->
     <section id="tab-dashboard">
+      <div id="backupReminderBanner" class="alert-banner hidden"></div>
+
       <div class="card">
         <div class="portfolio-head">
           <span class="label-muted">Total Portofolio Bersih</span>
@@ -540,6 +556,15 @@
           <button class="btn" onclick="openQuickForm('Expense')">+ Catat Pengeluaran</button>
           <button class="btn btn-secondary" onclick="openQuickForm('Transfer')">⇄ Transfer / Valas</button>
         </div>
+      </div>
+
+      <!-- PERINGATAN OTOMATIS & REKAP AUTO-DEBIT JATUH TEMPO -->
+      <div class="card" id="autoDebitCard">
+        <div class="section-title">
+          <span>Rekap & Peringatan Auto-Debit (7 Hari)</span>
+          <span class="label-muted" id="autoDebitBadge">0 tagihan</span>
+        </div>
+        <div id="autoDebitBox"></div>
       </div>
 
       <!-- BUDGET HARIAN & BULANAN DENGAN PROGRESS BAR -->
@@ -593,8 +618,14 @@
       <div class="card">
         <div class="section-title">
           <span>Riwayat & Pencarian</span>
-          <button class="icon-btn" onclick="resetFilters()">Reset</button>
+          <div style="display:flex;gap:6px;">
+            <button class="icon-btn" onclick="saveCurrentSavedView()">+ Simpan View</button>
+            <button class="icon-btn" onclick="resetFilters()">Reset</button>
+          </div>
         </div>
+
+        <!-- SAVED VIEWS (FILTER MULTI-KONDISI TERSIMPAN) -->
+        <div class="quick-chips hidden" id="savedViewsBar"></div>
 
         <!-- FILTER CEPAT PERIODE INSTAN -->
         <div class="quick-chips" id="periodChipsBar">
@@ -633,6 +664,16 @@
     <!-- TAB 2: GENERAL -->
     <section id="tab-general" class="hidden">
       <div class="grid-2x2" style="margin-bottom:14px;">
+        <button class="menu-tile" onclick="openOnDemandStatusModal()">
+          <span class="menu-icon">🛡️</span>
+          <div class="menu-title">Status Data & Backup</div>
+          <div class="menu-desc">Cek backup terakhir & lock pengingat berkala</div>
+        </button>
+        <button class="menu-tile" onclick="openOnDemandQuickParseModal()">
+          <span class="menu-icon">⚡</span>
+          <div class="menu-title">Quick Parse Teks</div>
+          <div class="menu-desc">Ubah catatan mentah menjadi draf transaksi</div>
+        </button>
         <button class="menu-tile" onclick="openBudgetModal()">
           <span class="menu-icon">🎯</span>
           <div class="menu-title">Budget Harian & Bulanan</div>
@@ -873,6 +914,28 @@
     </section>
   </div>
 
+  <!-- MODAL ON-DEMAND: STATUS DATA & LOCK PENGINGAT BACKUP -->
+  <div id="onDemandStatusModal" class="modal-backdrop hidden">
+    <div class="card" style="width:100%;max-width:440px;margin:0;max-height:88vh;overflow-y:auto;">
+      <div class="section-title">
+        <span>Status Data & Pengingat Backup</span>
+        <button class="icon-btn" onclick="closeOnDemandModal('onDemandStatusModal')">✕</button>
+      </div>
+      <div id="onDemandStatusBody"></div>
+    </div>
+  </div>
+
+  <!-- MODAL ON-DEMAND: QUICK PARSE TEKS MENTAH KE TRANSAKSI -->
+  <div id="onDemandQuickParseModal" class="modal-backdrop hidden">
+    <div class="card" style="width:100%;max-width:440px;margin:0;max-height:88vh;overflow-y:auto;">
+      <div class="section-title">
+        <span>Quick Parse Teks ke Transaksi</span>
+        <button class="icon-btn" onclick="closeOnDemandModal('onDemandQuickParseModal')">✕</button>
+      </div>
+      <div id="onDemandQuickParseBody"></div>
+    </div>
+  </div>
+
   <!-- MODAL BUDGET HARIAN & BULANAN -->
   <div id="budgetModal" class="modal-backdrop hidden">
     <div class="card" style="width:100%;max-width:420px;margin:0;">
@@ -1023,7 +1086,7 @@
   </nav>
 
   <script>
-    const STORAGE_KEY = 'money_x_pro_state_v10';
+    const STORAGE_KEY = 'money_x_pro_state_v11';
     const CURRENCIES = ['IDR', 'JPY', 'USD'];
 
     const THEME_PRESETS = {
@@ -1092,11 +1155,20 @@
 
     const DEFAULT_STATE = {
       displayCurrency: 'IDR',
+      privacyMask: false,
       budgets: {
         currency: 'IDR',
         daily: 0,
         monthly: 0
       },
+      backupMeta: {
+        lastJsonAt: null,
+        lastCsvAt: null,
+        lastCloudAt: null,
+        reminderDays: 7,
+        locked: false
+      },
+      savedViews: [],
       theme: {
         preset: 'emeraldSlate',
         accent: '#10b981',
@@ -1155,11 +1227,28 @@
     let tempPhotoUrl = null;
     let parsedFormattedItems = [];
     let parsedOcrAmount = null;
+    let quickParseDraft = null;
 
     function triggerHaptic(ms = 12) {
       if (state.interactiveFx?.peekHaptic && typeof navigator.vibrate === 'function') {
         try { navigator.vibrate(ms); } catch {}
       }
+    }
+
+    function togglePrivacyMask() {
+      state.privacyMask = !state.privacyMask;
+      saveState();
+      updatePrivacyButton();
+      renderAll();
+      triggerHaptic(10);
+      showToast(state.privacyMask ? 'Saldo disembunyikan' : 'Saldo ditampilkan');
+    }
+
+    function updatePrivacyButton() {
+      const btn = document.getElementById('btnPrivacyMask');
+      if (!btn) return;
+      btn.textContent = state.privacyMask ? '🙈' : '👁';
+      btn.classList.toggle('active-chip', Boolean(state.privacyMask));
     }
 
     function applyInteractiveFxClasses() {
@@ -1242,6 +1331,233 @@
       closeBudgetModal();
       renderAll();
       showToast('Batas budget harian & bulanan disimpan');
+    }
+
+    // --- ON-DEMAND MODALS (RENDER SAAT DIBUKA SAJA) ---
+    function closeOnDemandModal(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('hidden');
+      if (id === 'onDemandStatusModal') {
+        document.getElementById('onDemandStatusBody').innerHTML = '';
+      } else if (id === 'onDemandQuickParseModal') {
+        document.getElementById('onDemandQuickParseBody').innerHTML = '';
+      }
+    }
+
+    function getLastBackupTimestamp() {
+      const bm = state.backupMeta || {};
+      const times = [bm.lastJsonAt, bm.lastCloudAt].filter(Boolean).map(t => new Date(t).getTime()).filter(Number.isFinite);
+      return times.length ? Math.max(...times) : null;
+    }
+
+    function daysSinceBackup() {
+      const last = getLastBackupTimestamp();
+      if (!last) return null;
+      return Math.floor((Date.now() - last) / (1000 * 60 * 60 * 24));
+    }
+
+    function openOnDemandStatusModal() {
+      const bm = state.backupMeta || DEFAULT_STATE.backupMeta;
+      const days = daysSinceBackup();
+      const fmtTs = (iso) => iso ? new Date(iso).toLocaleString('id-ID') : 'Belum pernah';
+      const body = document.getElementById('onDemandStatusBody');
+
+      body.innerHTML = `
+        <div class="stat-box" style="margin-bottom:10px;">
+          <div class="stat-label">Backup JSON Terakhir</div>
+          <div class="stat-val">${escapeHtml(fmtTs(bm.lastJsonAt))}</div>
+          <div class="stat-label" style="margin-top:8px;">Upload Cloud Terakhir</div>
+          <div class="stat-val">${escapeHtml(fmtTs(bm.lastCloudAt))}</div>
+          <div class="stat-label" style="margin-top:8px;">Export CSV Terakhir</div>
+          <div class="stat-val">${escapeHtml(fmtTs(bm.lastCsvAt))}</div>
+        </div>
+        <div class="form-group">
+          <label for="odReminderDays">Interval Pengingat Backup (hari)</label>
+          <input type="number" min="1" max="90" id="odReminderDays" value="${Number(bm.reminderDays) || 7}" ${bm.locked ? 'disabled' : ''} />
+        </div>
+        <div class="fx-toggle-row" style="margin-bottom:12px;">
+          <div>
+            <div style="font-weight:700;font-size:13px;">Lock Pengaturan Pengingat</div>
+            <div class="asset-meta">${days === null ? 'Belum ada backup tercatat' : `Terakhir backup ${days} hari lalu`}</div>
+          </div>
+          <button type="button" class="switch-pill ${bm.locked ? 'on' : ''}" onclick="toggleBackupLock()">${bm.locked ? 'LOCKED' : 'OPEN'}</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button type="button" class="btn btn-secondary" onclick="saveBackupReminderDays()">Simpan Interval</button>
+          <button type="button" class="btn" onclick="exportBackupJSON(); openOnDemandStatusModal();">Backup JSON Sekarang</button>
+        </div>
+      `;
+      document.getElementById('onDemandStatusModal').classList.remove('hidden');
+    }
+
+    function toggleBackupLock() {
+      state.backupMeta = {
+        ...(state.backupMeta || DEFAULT_STATE.backupMeta),
+        locked: !state.backupMeta?.locked
+      };
+      saveState();
+      openOnDemandStatusModal();
+      showToast(state.backupMeta.locked ? 'Pengaturan pengingat di-lock' : 'Pengaturan pengingat dibuka');
+    }
+
+    function saveBackupReminderDays() {
+      if (state.backupMeta?.locked) {
+        showToast('Pengaturan sedang di-lock');
+        return;
+      }
+      const val = Math.max(1, Math.min(90, Number(document.getElementById('odReminderDays')?.value) || 7));
+      state.backupMeta = {
+        ...(state.backupMeta || DEFAULT_STATE.backupMeta),
+        reminderDays: val
+      };
+      saveState();
+      renderAll();
+      showToast(`Pengingat backup diatur tiap ${val} hari`);
+    }
+
+    function openOnDemandQuickParseModal() {
+      quickParseDraft = null;
+      const body = document.getElementById('onDemandQuickParseBody');
+      body.innerHTML = `
+        <p class="asset-meta" style="margin-top:0;margin-bottom:10px;">
+          Tulis catatan bebas, contoh: <em>"makan siang 950 JPY di Seicomart"</em> atau <em>"gaji 227000 JPY"</em>.
+        </p>
+        <div class="form-group">
+          <label for="qpRawText">Catatan Mentah</label>
+          <textarea id="qpRawText" placeholder="Contoh: kopi latte 480 JPY Lawson"></textarea>
+        </div>
+        <button type="button" class="btn btn-secondary" style="margin-bottom:10px;" onclick="parseRawTextDraft()">⚡ Ekstrak Draf</button>
+        <div id="qpResultBox" class="stat-box hidden" style="margin-bottom:10px;"></div>
+        <button type="button" class="btn hidden" id="qpApplyBtn" onclick="applyQuickParseToForm()">Masukkan ke Form Input</button>
+      `;
+      document.getElementById('onDemandQuickParseModal').classList.remove('hidden');
+    }
+
+    function parseRawTextDraft() {
+      const raw = (document.getElementById('qpRawText')?.value || '').trim();
+      if (!raw) {
+        showToast('Tulis catatan mentah dulu');
+        return;
+      }
+      const lower = raw.toLowerCase();
+      let currency = state.displayCurrency;
+      if (/\bjpy\b|¥|yen/i.test(raw)) currency = 'JPY';
+      else if (/\busd\b|\$/i.test(raw)) currency = 'USD';
+      else if (/\bidr\b|\brp\b|ribu|jt/i.test(raw)) currency = 'IDR';
+
+      const numMatch = raw.match(/\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?/);
+      let amount = 0;
+      if (numMatch) {
+        const cleaned = numMatch[0].replace(/,/g, '');
+        amount = Number(cleaned) || 0;
+        if (/jt/i.test(raw) && amount < 1000) amount *= 1000000;
+        else if (/ribu/i.test(raw) && amount < 1000) amount *= 1000;
+      }
+
+      const type = /gaji|salary|bonus|masuk|income/i.test(lower) ? 'Income' : 'Expense';
+      let category = type === 'Income' ? 'Gaji / Pemasukan' : 'Lainnya';
+      if (/makan|nasi|bento|ramen|lunch|dinner/i.test(lower)) category = 'Makanan';
+      else if (/kopi|coffee|latte|minum/i.test(lower)) category = 'Kopi & Minuman';
+      else if (/kereta|bus|train|transport|bensin/i.test(lower)) category = 'Transportasi';
+      else if (/listrik|air|gas|internet|tagihan/i.test(lower)) category = 'Utilitas & Tagihan';
+
+      quickParseDraft = { type, category, currency, amount, note: raw };
+      const box = document.getElementById('qpResultBox');
+      box.innerHTML = `
+        <div class="stat-label">Hasil Ekstrak Draf</div>
+        <div style="font-size:13px;margin-top:4px;">
+          <strong>Tipe:</strong> ${escapeHtml(type)} · <strong>Kategori:</strong> ${escapeHtml(category)}<br/>
+          <strong>Nominal:</strong> ${amount > 0 ? formatMoney(amount, currency) : 'Belum terdeteksi'} (${currency})<br/>
+          <strong>Catatan:</strong> ${escapeHtml(raw)}
+        </div>
+      `;
+      box.classList.remove('hidden');
+      document.getElementById('qpApplyBtn').classList.remove('hidden');
+    }
+
+    function applyQuickParseToForm() {
+      if (!quickParseDraft) return;
+      openQuickForm(quickParseDraft.type);
+      document.getElementById('fCategory').value = quickParseDraft.category;
+      document.getElementById('fCurr').value = quickParseDraft.currency;
+      if (quickParseDraft.amount > 0) document.getElementById('fAmount').value = quickParseDraft.amount;
+      document.getElementById('fNote').value = quickParseDraft.note;
+      closeOnDemandModal('onDemandQuickParseModal');
+      showToast('Draf masuk ke form input');
+    }
+
+    // --- SAVED VIEWS ---
+    function saveCurrentSavedView() {
+      const name = prompt('Nama filter tersimpan (contoh: Expense JPY Bulan Ini):');
+      if (!name || !name.trim()) return;
+      const view = {
+        id: 'SV-' + Date.now(),
+        name: name.trim(),
+        period: activePeriod,
+        q: document.getElementById('searchInput').value || '',
+        asset: document.getElementById('assetFilter').value || 'ALL',
+        type: document.getElementById('typeFilter').value || 'ALL',
+        curr: document.getElementById('currFilter').value || 'ALL',
+        dateFrom: document.getElementById('dateFrom').value || '',
+        dateTo: document.getElementById('dateTo').value || ''
+      };
+      state.savedViews = [...(state.savedViews || []), view].slice(-8);
+      saveState();
+      renderSavedViewsBar();
+      showToast(`Saved view "${view.name}" disimpan`);
+    }
+
+    function applySavedView(id) {
+      const v = (state.savedViews || []).find(x => x.id === id);
+      if (!v) return;
+      activePeriod = v.period || 'CUSTOM';
+      syncPeriodButtons();
+      document.getElementById('searchInput').value = v.q || '';
+      document.getElementById('assetFilter').value = v.asset || 'ALL';
+      document.getElementById('typeFilter').value = v.type || 'ALL';
+      document.getElementById('currFilter').value = v.curr || 'ALL';
+      document.getElementById('dateFrom').value = v.dateFrom || '';
+      document.getElementById('dateTo').value = v.dateTo || '';
+      renderAll();
+      showToast(`Filter "${v.name}" aktif`);
+    }
+
+    function removeSavedView(id) {
+      state.savedViews = (state.savedViews || []).filter(x => x.id !== id);
+      saveState();
+      renderSavedViewsBar();
+    }
+
+    function renderSavedViewsBar() {
+      const bar = document.getElementById('savedViewsBar');
+      const views = state.savedViews || [];
+      if (!views.length) {
+        bar.classList.add('hidden');
+        bar.innerHTML = '';
+        return;
+      }
+      bar.classList.remove('hidden');
+      bar.innerHTML = views.map(v => `
+        <span class="chip-btn" style="display:inline-flex;align-items:center;gap:6px;">
+          <span onclick="applySavedView('${v.id}')">★ ${escapeHtml(v.name)}</span>
+          <span onclick="removeSavedView('${v.id}')" style="opacity:0.7;">×</span>
+        </span>
+      `).join('');
+    }
+
+    // --- DUPLICATE DETECTION ---
+    function findDuplicateTransaction(type, currency, amount, date, editId) {
+      const targetAmt = Number(amount) || 0;
+      const d0 = new Date((date || todayISO()) + 'T00:00:00').getTime();
+      return state.transactions.find(t => {
+        if (editId && t.id === editId) return false;
+        if (t.type !== type || t.currency !== currency) return false;
+        if (Math.abs((Number(t.amount) || 0) - targetAmt) > 0.0001) return false;
+        const d1 = new Date((t.date || todayISO()) + 'T00:00:00').getTime();
+        const diffDays = Math.abs(d0 - d1) / (1000 * 60 * 60 * 24);
+        return diffDays <= 1;
+      });
     }
 
     function applyTheme(customTheme = state.theme) {
@@ -1350,7 +1666,10 @@
       return {
         ...base,
         ...parsed,
+        privacyMask: Boolean(parsed.privacyMask),
         budgets: { ...base.budgets, ...(parsed.budgets || {}) },
+        backupMeta: { ...base.backupMeta, ...(parsed.backupMeta || {}) },
+        savedViews: Array.isArray(parsed.savedViews) ? parsed.savedViews : [],
         theme: { ...base.theme, ...(parsed.theme || {}) },
         interactiveFx: { ...base.interactiveFx, ...(parsed.interactiveFx || {}) },
         syncUrl: parsed.syncUrl || keepSyncUrl || '',
@@ -1369,6 +1688,7 @@
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY)
+          || localStorage.getItem('money_x_pro_state_v10')
           || localStorage.getItem('money_x_pro_state_v9')
           || localStorage.getItem('money_x_pro_state_v8')
           || localStorage.getItem('money_x_pro_state_v7')
@@ -1460,6 +1780,7 @@
     }
 
     function formatMoney(amount, curr = state.displayCurrency) {
+      if (state.privacyMask) return '••••••';
       const val = Number(amount) || 0;
       if (curr === 'IDR') return 'Rp ' + Math.round(val).toLocaleString('id-ID');
       if (curr === 'JPY') return '¥' + Math.round(val).toLocaleString('en-US');
@@ -2029,6 +2350,11 @@
         return;
       }
 
+      const dup = findDuplicateTransaction(type, currency, amount, date, editId);
+      if (dup && !confirm(`Terdeteksi transaksi mirip (${dup.category} · ${formatMoney(dup.amount, dup.currency)} pada ${dup.date}). Tetap simpan?`)) {
+        return;
+      }
+
       if (editId) {
         const idx = state.transactions.findIndex(t => t.id === editId);
         if (idx !== -1) {
@@ -2221,6 +2547,12 @@
           body: JSON.stringify({ action: 'save', payload: state })
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
+        state.backupMeta = {
+          ...(state.backupMeta || DEFAULT_STATE.backupMeta),
+          lastCloudAt: new Date().toISOString()
+        };
+        saveState();
+        renderAll();
         showToast('Data berhasil di-upload ke awan');
       } catch {
         showToast('Gagal upload ke awan');
@@ -2248,6 +2580,7 @@
           state = normalizeImportedState(payload, url);
           applyTheme(state.theme);
           applyInteractiveFxClasses();
+          updatePrivacyButton();
           processDueAutoDebits(true);
           saveState();
           renderAll();
@@ -2278,14 +2611,19 @@
       const keepTheme = state.theme || DEFAULT_STATE.theme;
       const keepFx = state.interactiveFx || DEFAULT_STATE.interactiveFx;
       const keepBudgets = state.budgets || DEFAULT_STATE.budgets;
+      const keepBackupMeta = state.backupMeta || DEFAULT_STATE.backupMeta;
+      const keepSavedViews = state.savedViews || [];
       state = structuredClone(DEFAULT_STATE);
       state.syncUrl = keepUrl;
       state.theme = keepTheme;
       state.interactiveFx = keepFx;
       state.budgets = keepBudgets;
+      state.backupMeta = keepBackupMeta;
+      state.savedViews = keepSavedViews;
       saveState();
       applyTheme(state.theme);
       applyInteractiveFxClasses();
+      updatePrivacyButton();
       fetchOnlineRates(false);
       renderAll();
       showToast('Data awal dipulihkan');
@@ -2299,6 +2637,12 @@
       a.download = `money-x-backup-${todayISO()}.json`;
       a.click();
       URL.revokeObjectURL(url);
+      state.backupMeta = {
+        ...(state.backupMeta || DEFAULT_STATE.backupMeta),
+        lastJsonAt: new Date().toISOString()
+      };
+      saveState();
+      renderAll();
       showToast('Backup JSON diunduh');
     }
 
@@ -2316,6 +2660,7 @@
           state = normalizeImportedState(data, state.syncUrl);
           applyTheme(state.theme);
           applyInteractiveFxClasses();
+          updatePrivacyButton();
           processDueAutoDebits(true);
           saveState();
           renderAll();
@@ -2341,6 +2686,12 @@
       a.download = `money-x-report-${todayISO()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
+      state.backupMeta = {
+        ...(state.backupMeta || DEFAULT_STATE.backupMeta),
+        lastCsvAt: new Date().toISOString()
+      };
+      saveState();
+      renderAll();
       showToast('Report CSV diunduh');
     }
 
@@ -2403,11 +2754,26 @@
       const timeLabel = state.rateMeta?.updatedAt ? ` · ${state.rateMeta.updatedAt}` : '';
       document.getElementById('rateStatus').textContent = `Kurs: ${modeLabel}${timeLabel}`;
 
+      // Pengingat Backup Berkala di Dashboard
+      const bannerEl = document.getElementById('backupReminderBanner');
+      const reminderDays = Number(state.backupMeta?.reminderDays) || 7;
+      const daysAgo = daysSinceBackup();
+      if (daysAgo === null || daysAgo >= reminderDays) {
+        bannerEl.classList.remove('hidden');
+        bannerEl.classList.remove('ok');
+        bannerEl.innerHTML = daysAgo === null
+          ? `<strong>Pengingat Backup:</strong> Belum ada backup JSON/Cloud tercatat. <button type="button" class="icon-btn" style="margin-left:6px;" onclick="exportBackupJSON()">Backup Sekarang</button>`
+          : `<strong>Pengingat Backup:</strong> Sudah <strong>${daysAgo} hari</strong> sejak backup terakhir (target tiap ${reminderDays} hari). <button type="button" class="icon-btn" style="margin-left:6px;" onclick="exportBackupJSON()">Backup Sekarang</button>`;
+      } else {
+        bannerEl.classList.add('hidden');
+      }
+
       const totalPortfolio = state.assets.reduce((sum, a) => sum + convertCurrency(a.balance, a.currency, disp), 0);
       const monthPrefix = currentMonthPrefix();
       const prevMonthPrefix = prevCalendarMonthPrefix();
       const nextMonthPrefix = nextCalendarMonthPrefix();
       const today = todayISO();
+      const next7Days = shiftISO(today, 7);
 
       const monthExpenses = state.transactions.filter(t => t.type === 'Expense' && (t.date || '').startsWith(monthPrefix));
       const monthExpense = monthExpenses.reduce((sum, t) => sum + convertCurrency(t.amount, t.currency, disp), 0);
@@ -2438,6 +2804,34 @@
       document.getElementById('statToday').textContent = formatMoney(todayExpense, disp);
       document.getElementById('statDebt').textContent = formatMoney(totalDebt, disp);
       document.getElementById('statNextMonthDue').textContent = formatMoney(nextMonthDue, disp);
+
+      // Rekap & Peringatan Auto-Debit Jatuh Tempo (7 Hari)
+      const upcomingDue = pendingLiabilities
+        .filter(t => (t.dueDate || t.date) <= next7Days)
+        .sort((a, b) => (a.dueDate || a.date).localeCompare(b.dueDate || b.date));
+      document.getElementById('autoDebitBadge').textContent = `${upcomingDue.length} tagihan`;
+      const adBox = document.getElementById('autoDebitBox');
+      if (!upcomingDue.length) {
+        adBox.innerHTML = `<div class="asset-meta">Tidak ada auto-debit jatuh tempo dalam 7 hari ke depan.</div>`;
+      } else {
+        adBox.innerHTML = upcomingDue.map(t => {
+          const due = t.dueDate || t.date;
+          const srcAsset = state.assets.find(a => a.id === t.sourceAssetId);
+          const neededInSrc = srcAsset ? convertCurrency(t.amount, t.currency, srcAsset.currency) : 0;
+          const enough = !srcAsset || (Number(srcAsset.balance) || 0) >= neededInSrc;
+          return `
+            <div class="alert-banner ${enough ? 'ok' : ''}" style="margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <div>
+                  <strong>${escapeHtml(t.category)}</strong> · Jatuh tempo <strong>${escapeHtml(due)}</strong>
+                  <div class="asset-meta">Akun: ${escapeHtml(srcAsset?.name || '-')} · ${enough ? 'Saldo mencukupi' : 'Peringatan: Saldo akun kurang!'}</div>
+                </div>
+                <strong class="amt-liability">${formatMoney(t.amount, t.currency)}</strong>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
 
       // Budget progress bar
       const bCurr = state.budgets?.currency || disp;
@@ -2497,7 +2891,7 @@
         if (!assetEntries.length) {
           chartEl.innerHTML = `<div class="asset-meta">Belum ada data grafik untuk ditampilkan.</div>`;
         } else {
-          const maxVal = Math.max(...assetEntries.map(e => e.val), 1);
+          const maxVal = Math.max(...assetEntries.map(e => e[1]), 1);
           chartEl.innerHTML = assetEntries.map(x => {
             const pct = Math.max(4, Math.round((x.val / maxVal) * 100));
             return `
@@ -2538,6 +2932,8 @@
           `;
         }).join('');
       }
+
+      renderSavedViewsBar();
 
       const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
       const assetF = document.getElementById('assetFilter').value;
@@ -2654,6 +3050,7 @@
 
     applyTheme(state.theme);
     applyInteractiveFxClasses();
+    updatePrivacyButton();
     syncPeriodButtons();
     document.getElementById('fDate').value = todayISO();
     processDueAutoDebits(true);
