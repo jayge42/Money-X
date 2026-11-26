@@ -81,6 +81,11 @@
       transition: transform var(--anim-speed) ease, border-color var(--anim-speed) ease, background var(--anim-speed) ease;
     }
     .icon-btn:active { transform: scale(0.96); }
+    .icon-btn.active-chip {
+      background: var(--accent-soft);
+      border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+      color: var(--text);
+    }
 
     .container { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
 
@@ -189,6 +194,46 @@
       color: var(--text);
     }
 
+    .budget-block { margin-bottom: 12px; }
+    .budget-block:last-child { margin-bottom: 0; }
+    .budget-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 12px;
+      margin-bottom: 5px;
+      gap: 8px;
+    }
+    .budget-track {
+      height: 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .budget-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--green);
+      transition: width var(--anim-speed) ease, background var(--anim-speed) ease;
+    }
+    .budget-fill.warn { background: var(--amber); }
+    .budget-fill.over { background: var(--red); }
+
+    .cashflow-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .month-compare {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+
     .asset-item, .tx-item {
       display: flex;
       align-items: center;
@@ -242,7 +287,7 @@
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .chip-btn {
       background: var(--surface-2);
@@ -254,7 +299,10 @@
       font-weight: 700;
       cursor: pointer;
     }
-    .chip-btn:hover { border-color: var(--accent); }
+    .chip-btn:hover, .chip-btn.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
 
     .fx-toggle-row {
       display: flex;
@@ -426,7 +474,7 @@
       .top-actions, .bottom-nav, .quick-row, .filters, .icon-btn, .modal-backdrop, #toast, .quick-chips { display: none !important; }
       .topbar { position: static; background: #fff !important; border-bottom: 2px solid #ddd; }
       .card { background: #fff !important; border: 1px solid #ccc !important; break-inside: avoid; }
-      .stat-box { background: #f8fafc !important; border: 1px solid #ddd !important; }
+      .stat-box, .month-compare { background: #f8fafc !important; border: 1px solid #ddd !important; }
       .label-muted, .asset-meta, .asset-sub, .stat-label, .brand-sub, .rate-mode { color: #555 !important; }
       .portfolio-amount, .asset-name, .asset-main, .brand-title { color: #000 !important; }
     }
@@ -443,6 +491,7 @@
       </div>
     </div>
     <div class="top-actions">
+      <button class="icon-btn" onclick="openBudgetModal()">Budget</button>
       <button class="icon-btn" onclick="openThemeModal()">Tema & FX</button>
       <button class="icon-btn" onclick="openSyncModal()">Cloud</button>
       <button class="icon-btn" onclick="openRatesModal()">Kurs</button>
@@ -493,6 +542,38 @@
         </div>
       </div>
 
+      <!-- BUDGET HARIAN & BULANAN DENGAN PROGRESS BAR -->
+      <div class="card">
+        <div class="section-title">
+          <span>Budget Harian & Bulanan</span>
+          <button class="icon-btn" onclick="openBudgetModal()">Atur Batas</button>
+        </div>
+        <div id="budgetProgressBox"></div>
+      </div>
+
+      <!-- RINGKASAN NET CASH FLOW & PERBANDINGAN BULANAN -->
+      <div class="card">
+        <div class="section-title">
+          <span>Net Cash Flow & Perbandingan Bulanan</span>
+          <span class="label-muted" id="cashflowMonthLabel">Bulan Ini</span>
+        </div>
+        <div class="cashflow-grid">
+          <div class="stat-box">
+            <div class="stat-label">Income Bulan Ini</div>
+            <div class="stat-val amt-income" id="cfIncome">Rp 0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Expense Bulan Ini</div>
+            <div class="stat-val amt-expense" id="cfExpense">Rp 0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Net Cash Flow</div>
+            <div class="stat-val" id="cfNet">Rp 0</div>
+          </div>
+        </div>
+        <div class="month-compare" id="monthCompareBox"></div>
+      </div>
+
       <div class="card">
         <div class="section-title">
           <span>Grafik Visual Kategori & Aset</span>
@@ -515,6 +596,14 @@
           <button class="icon-btn" onclick="resetFilters()">Reset</button>
         </div>
 
+        <!-- FILTER CEPAT PERIODE INSTAN -->
+        <div class="quick-chips" id="periodChipsBar">
+          <button type="button" class="chip-btn active" id="period-ALL" onclick="setQuickPeriod('ALL')">Semua</button>
+          <button type="button" class="chip-btn" id="period-TODAY" onclick="setQuickPeriod('TODAY')">Hari Ini</button>
+          <button type="button" class="chip-btn" id="period-7D" onclick="setQuickPeriod('7D')">7 Hari</button>
+          <button type="button" class="chip-btn" id="period-MONTH" onclick="setQuickPeriod('MONTH')">Bulan Ini</button>
+        </div>
+
         <div class="filters">
           <input type="search" id="searchInput" class="full" placeholder="Cari catatan, kategori, barang, atau aset..." oninput="renderAll()" />
           <select id="assetFilter" onchange="renderAll()">
@@ -533,8 +622,8 @@
             <option value="JPY">JPY</option>
             <option value="USD">USD</option>
           </select>
-          <input type="date" id="dateFrom" onchange="renderAll()" />
-          <input type="date" id="dateTo" onchange="renderAll()" />
+          <input type="date" id="dateFrom" onchange="markCustomDateRange(); renderAll();" />
+          <input type="date" id="dateTo" onchange="markCustomDateRange(); renderAll();" />
         </div>
 
         <div id="txList"></div>
@@ -544,6 +633,11 @@
     <!-- TAB 2: GENERAL -->
     <section id="tab-general" class="hidden">
       <div class="grid-2x2" style="margin-bottom:14px;">
+        <button class="menu-tile" onclick="openBudgetModal()">
+          <span class="menu-icon">🎯</span>
+          <div class="menu-title">Budget Harian & Bulanan</div>
+          <div class="menu-desc">Atur batas pengeluaran & pantau progress bar</div>
+        </button>
         <button class="menu-tile" onclick="openThemeModal()">
           <span class="menu-icon">🎨</span>
           <div class="menu-title">5 Tema & 3 Fitur FX</div>
@@ -779,6 +873,31 @@
     </section>
   </div>
 
+  <!-- MODAL BUDGET HARIAN & BULANAN -->
+  <div id="budgetModal" class="modal-backdrop hidden">
+    <div class="card" style="width:100%;max-width:420px;margin:0;">
+      <div class="section-title">
+        <span>Batas Budget Harian & Bulanan</span>
+        <button class="icon-btn" onclick="closeBudgetModal()">✕</button>
+      </div>
+      <p class="asset-meta" style="margin-top:0;margin-bottom:10px;">
+        Nominal disimpan dalam mata uang tampilan aktif (<strong id="budgetCurrHint">IDR</strong>) dan otomatis menyesuaikan saat kurs/mata uang diganti.
+      </p>
+      <div class="form-group">
+        <label for="bDaily">Batas Expense Harian</label>
+        <input type="number" min="0" step="any" id="bDaily" placeholder="Contoh: 2000" />
+      </div>
+      <div class="form-group">
+        <label for="bMonthly">Batas Expense Bulanan</label>
+        <input type="number" min="0" step="any" id="bMonthly" placeholder="Contoh: 60000" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button type="button" class="btn btn-secondary" onclick="closeBudgetModal()">Batal</button>
+        <button type="button" class="btn" onclick="saveBudgetSettings()">Simpan Budget</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL 5 TEMA + 3 FITUR INTERAKTIF + KUSTOMISASI -->
   <div id="themeModal" class="modal-backdrop hidden">
     <div class="card" style="width:100%;max-width:450px;margin:0;max-height:88vh;overflow-y:auto;">
@@ -904,7 +1023,7 @@
   </nav>
 
   <script>
-    const STORAGE_KEY = 'money_x_pro_state_v9';
+    const STORAGE_KEY = 'money_x_pro_state_v10';
     const CURRENCIES = ['IDR', 'JPY', 'USD'];
 
     const THEME_PRESETS = {
@@ -973,6 +1092,11 @@
 
     const DEFAULT_STATE = {
       displayCurrency: 'IDR',
+      budgets: {
+        currency: 'IDR',
+        daily: 0,
+        monthly: 0
+      },
       theme: {
         preset: 'emeraldSlate',
         accent: '#10b981',
@@ -1027,6 +1151,7 @@
     ];
 
     let state = loadState();
+    let activePeriod = 'ALL';
     let tempPhotoUrl = null;
     let parsedFormattedItems = [];
     let parsedOcrAmount = null;
@@ -1086,6 +1211,37 @@
       el.classList.remove('pop-active');
       void el.offsetWidth;
       el.classList.add('pop-active');
+    }
+
+    function openBudgetModal() {
+      const disp = state.displayCurrency;
+      const bCurr = state.budgets?.currency || disp;
+      document.getElementById('budgetCurrHint').textContent = disp;
+      document.getElementById('bDaily').value = state.budgets?.daily > 0
+        ? Math.round(convertCurrency(state.budgets.daily, bCurr, disp))
+        : '';
+      document.getElementById('bMonthly').value = state.budgets?.monthly > 0
+        ? Math.round(convertCurrency(state.budgets.monthly, bCurr, disp))
+        : '';
+      document.getElementById('budgetModal').classList.remove('hidden');
+    }
+
+    function closeBudgetModal() {
+      document.getElementById('budgetModal').classList.add('hidden');
+    }
+
+    function saveBudgetSettings() {
+      const daily = Math.max(0, Number(document.getElementById('bDaily').value) || 0);
+      const monthly = Math.max(0, Number(document.getElementById('bMonthly').value) || 0);
+      state.budgets = {
+        currency: state.displayCurrency,
+        daily,
+        monthly
+      };
+      saveState();
+      closeBudgetModal();
+      renderAll();
+      showToast('Batas budget harian & bulanan disimpan');
     }
 
     function applyTheme(customTheme = state.theme) {
@@ -1194,6 +1350,7 @@
       return {
         ...base,
         ...parsed,
+        budgets: { ...base.budgets, ...(parsed.budgets || {}) },
         theme: { ...base.theme, ...(parsed.theme || {}) },
         interactiveFx: { ...base.interactiveFx, ...(parsed.interactiveFx || {}) },
         syncUrl: parsed.syncUrl || keepSyncUrl || '',
@@ -1212,6 +1369,7 @@
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY)
+          || localStorage.getItem('money_x_pro_state_v9')
           || localStorage.getItem('money_x_pro_state_v8')
           || localStorage.getItem('money_x_pro_state_v7')
           || localStorage.getItem('money_x_pro_state_v6')
@@ -1326,8 +1484,24 @@
       renderAll();
     }
 
-    function todayISO() { return new Date().toISOString().slice(0, 10); }
-    function currentMonthPrefix() { return new Date().toISOString().slice(0, 7); }
+    function todayISO() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function shiftISO(baseDateStr, daysOffset) {
+      const d = new Date((baseDateStr || todayISO()) + 'T00:00:00');
+      d.setDate(d.getDate() + daysOffset);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function currentMonthPrefix() { return todayISO().slice(0, 7); }
+
+    function prevCalendarMonthPrefix() {
+      const now = new Date();
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+    }
 
     function nextMonthOffsetISO(baseDateStr, monthOffset = 1) {
       const base = new Date((baseDateStr || todayISO()) + 'T00:00:00');
@@ -1342,6 +1516,42 @@
       const now = new Date();
       const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function setQuickPeriod(period) {
+      activePeriod = period;
+      const today = todayISO();
+      const fromEl = document.getElementById('dateFrom');
+      const toEl = document.getElementById('dateTo');
+
+      if (period === 'ALL') {
+        fromEl.value = '';
+        toEl.value = '';
+      } else if (period === 'TODAY') {
+        fromEl.value = today;
+        toEl.value = today;
+      } else if (period === '7D') {
+        fromEl.value = shiftISO(today, -6);
+        toEl.value = today;
+      } else if (period === 'MONTH') {
+        fromEl.value = `${today.slice(0, 7)}-01`;
+        toEl.value = today;
+      }
+
+      syncPeriodButtons();
+      triggerHaptic(8);
+      renderAll();
+    }
+
+    function markCustomDateRange() {
+      activePeriod = 'CUSTOM';
+      syncPeriodButtons();
+    }
+
+    function syncPeriodButtons() {
+      ['ALL', 'TODAY', '7D', 'MONTH'].forEach(p => {
+        document.getElementById('period-' + p)?.classList.toggle('active', activePeriod === p);
+      });
     }
 
     function processDueAutoDebits(silent = true) {
@@ -2051,6 +2261,8 @@
     }
 
     function resetFilters() {
+      activePeriod = 'ALL';
+      syncPeriodButtons();
       document.getElementById('searchInput').value = '';
       document.getElementById('assetFilter').value = 'ALL';
       document.getElementById('typeFilter').value = 'ALL';
@@ -2065,10 +2277,12 @@
       const keepUrl = state.syncUrl || '';
       const keepTheme = state.theme || DEFAULT_STATE.theme;
       const keepFx = state.interactiveFx || DEFAULT_STATE.interactiveFx;
+      const keepBudgets = state.budgets || DEFAULT_STATE.budgets;
       state = structuredClone(DEFAULT_STATE);
       state.syncUrl = keepUrl;
       state.theme = keepTheme;
       state.interactiveFx = keepFx;
+      state.budgets = keepBudgets;
       saveState();
       applyTheme(state.theme);
       applyInteractiveFxClasses();
@@ -2143,6 +2357,36 @@
       return '';
     }
 
+    function renderBudgetBarHtml(label, spent, limit, curr) {
+      if (!limit || limit <= 0) {
+        return `
+          <div class="budget-block">
+            <div class="budget-meta">
+              <span style="font-weight:700;">${escapeHtml(label)}</span>
+              <span class="asset-meta">Terpakai ${formatMoney(spent, curr)} · Batas belum diatur</span>
+            </div>
+            <div class="budget-track"><div class="budget-fill" style="width:0%;"></div></div>
+          </div>
+        `;
+      }
+      const rawPct = (spent / limit) * 100;
+      const pct = Math.min(100, Math.max(0, rawPct));
+      const stateCls = rawPct >= 100 ? 'over' : (rawPct >= 80 ? 'warn' : '');
+      const statusText = rawPct >= 100
+        ? `Melebihi batas (${Math.round(rawPct)}%)`
+        : `${Math.round(rawPct)}% · Sisa ${formatMoney(Math.max(0, limit - spent), curr)}`;
+
+      return `
+        <div class="budget-block">
+          <div class="budget-meta">
+            <span style="font-weight:700;">${escapeHtml(label)}</span>
+            <span class="asset-meta">${formatMoney(spent, curr)} / ${formatMoney(limit, curr)} (${statusText})</span>
+          </div>
+          <div class="budget-track"><div class="budget-fill ${stateCls}" style="width:${pct}%;"></div></div>
+        </div>
+      `;
+    }
+
     function escapeHtml(str) {
       return String(str || '').replace(/[&<>"']/g, m => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -2161,6 +2405,7 @@
 
       const totalPortfolio = state.assets.reduce((sum, a) => sum + convertCurrency(a.balance, a.currency, disp), 0);
       const monthPrefix = currentMonthPrefix();
+      const prevMonthPrefix = prevCalendarMonthPrefix();
       const nextMonthPrefix = nextCalendarMonthPrefix();
       const today = todayISO();
 
@@ -2168,6 +2413,18 @@
       const monthExpense = monthExpenses.reduce((sum, t) => sum + convertCurrency(t.amount, t.currency, disp), 0);
       const todayExpense = state.transactions
         .filter(t => t.type === 'Expense' && t.date === today)
+        .reduce((sum, t) => sum + convertCurrency(t.amount, t.currency, disp), 0);
+
+      const monthIncome = state.transactions
+        .filter(t => t.type === 'Income' && (t.date || '').startsWith(monthPrefix))
+        .reduce((sum, t) => sum + convertCurrency(t.amount, t.currency, disp), 0);
+      const netCashFlow = monthIncome - monthExpense;
+
+      const prevMonthExpense = state.transactions
+        .filter(t => t.type === 'Expense' && (t.date || '').startsWith(prevMonthPrefix))
+        .reduce((sum, t) => sum + convertCurrency(t.amount, t.currency, disp), 0);
+      const prevMonthIncome = state.transactions
+        .filter(t => t.type === 'Income' && (t.date || '').startsWith(prevMonthPrefix))
         .reduce((sum, t) => sum + convertCurrency(t.amount, t.currency, disp), 0);
 
       const pendingLiabilities = state.transactions.filter(t => t.type === 'Liability' && t.status !== 'Paid');
@@ -2181,6 +2438,33 @@
       document.getElementById('statToday').textContent = formatMoney(todayExpense, disp);
       document.getElementById('statDebt').textContent = formatMoney(totalDebt, disp);
       document.getElementById('statNextMonthDue').textContent = formatMoney(nextMonthDue, disp);
+
+      // Budget progress bar
+      const bCurr = state.budgets?.currency || disp;
+      const dailyLimit = state.budgets?.daily > 0 ? convertCurrency(state.budgets.daily, bCurr, disp) : 0;
+      const monthlyLimit = state.budgets?.monthly > 0 ? convertCurrency(state.budgets.monthly, bCurr, disp) : 0;
+      document.getElementById('budgetProgressBox').innerHTML =
+        renderBudgetBarHtml('Budget Harian', todayExpense, dailyLimit, disp) +
+        renderBudgetBarHtml('Budget Bulanan', monthExpense, monthlyLimit, disp);
+
+      // Net Cash Flow & Perbandingan Bulanan
+      document.getElementById('cashflowMonthLabel').textContent = monthPrefix;
+      document.getElementById('cfIncome').textContent = formatMoney(monthIncome, disp);
+      document.getElementById('cfExpense').textContent = formatMoney(monthExpense, disp);
+      const cfNetEl = document.getElementById('cfNet');
+      cfNetEl.textContent = (netCashFlow >= 0 ? '+' : '-') + formatMoney(Math.abs(netCashFlow), disp);
+      cfNetEl.className = 'stat-val ' + (netCashFlow >= 0 ? 'amt-income' : 'amt-expense');
+
+      const diffExp = monthExpense - prevMonthExpense;
+      let compareText = `Bulan lalu (${prevMonthPrefix}): Expense ${formatMoney(prevMonthExpense, disp)} · Income ${formatMoney(prevMonthIncome, disp)}. `;
+      if (prevMonthExpense === 0 && monthExpense === 0) {
+        compareText += 'Belum ada perbandingan pengeluaran.';
+      } else if (diffExp <= 0) {
+        compareText += `Pengeluaran bulan ini lebih hemat ${formatMoney(Math.abs(diffExp), disp)} dibanding bulan lalu.`;
+      } else {
+        compareText += `Pengeluaran bulan ini naik ${formatMoney(diffExp, disp)} dibanding bulan lalu.`;
+      }
+      document.getElementById('monthCompareBox').textContent = compareText;
 
       const chartEl = document.getElementById('categoryChart');
       if (monthExpenses.length > 0) {
@@ -2370,6 +2654,7 @@
 
     applyTheme(state.theme);
     applyInteractiveFxClasses();
+    syncPeriodButtons();
     document.getElementById('fDate').value = todayISO();
     processDueAutoDebits(true);
     renderAll();
