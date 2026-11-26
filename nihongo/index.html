@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Nihongo-X" />
+  <title>Nihongo-X — Latihan Kanji & Kosakata</title>
+  <style>
+    :root {
+      --bg: #0d1118;
+      --surface: #151b26;
+      --surface-2: #1d2534;
+      --border: #2b364b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #10b981;
+      --accent-soft: rgba(16, 185, 129, 0.16);
+      --green: #34d399;
+      --amber: #fb923c;
+      --blue: #60a5fa;
+      --radius-card: 18px;
+      --radius-btn: 12px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(circle at top, color-mix(in srgb, var(--accent) 12%, transparent), transparent 48%), var(--bg);
+      color: var(--text);
+      padding-bottom: 88px;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-badge {
+      width: 36px; height: 36px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), #06b6d4);
+      color: #07120e;
+      display: grid; place-items: center; font-weight: 900; font-size: 15px;
+    }
+    .brand-title { font-weight: 800; font-size: 16px; line-height: 1.1; }
+    .brand-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .container { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .label-muted {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    select, input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 11px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .icon-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .icon-btn.active {
+      background: var(--accent-soft);
+      border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+      color: var(--text);
+    }
+
+    .btn {
+      width: 100%;
+      border: none;
+      border-radius: var(--radius-btn);
+      padding: 11px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #07120e;
+      background: var(--accent);
+    }
+    .btn-secondary {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-amber {
+      background: rgba(251, 146, 60, 0.16);
+      color: #fdba74;
+      border: 1px solid rgba(251, 146, 60, 0.35);
+    }
+
+    .kanji-prompt-box {
+      text-align: center;
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .target-meaning { font-size: 20px; font-weight: 800; margin: 4px 0; }
+    .target-sub { font-size: 12px; color: var(--muted); }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 1 / 1;
+      margin: 0 auto 12px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid var(--border);
+      background: #101520;
+      touch-action: none;
+    }
+
+    .kanji-guide-layer {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 185px;
+      font-weight: 700;
+      color: rgba(148, 163, 184, 0.16);
+      pointer-events: none;
+      user-select: none;
+      line-height: 1;
+    }
+
+    .grid-crosshair {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
+      background-size: 50% 50%;
+    }
+
+    canvas#kanjiCanvas {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    .canvas-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .answer-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+    .flashcard {
+      min-height: 210px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .fc-kanji { font-size: 44px; font-weight: 800; line-height: 1.25; }
+    .fc-reading { font-size: 15px; color: var(--green); font-weight: 700; margin-top: 6px; }
+    .fc-meaning { font-size: 19px; font-weight: 800; margin-top: 8px; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      background: var(--accent-soft);
+      color: var(--green);
+      margin-left: 6px;
+    }
+    .badge-amber {
+      background: rgba(251, 146, 60, 0.18);
+      color: #fdba74;
+    }
+
+    .vocab-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+    }
+    .vocab-row:last-child { border-bottom: none; }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: color-mix(in srgb, var(--surface) 95%, transparent);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+      z-index: 30;
+    }
+    .nav-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 6px 2px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .nav-btn.active { color: var(--text); background: var(--accent-soft); }
+
+    .hidden { display: none !important; }
+    .toast {
+      position: fixed;
+      top: 66px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      z-index: 60;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-badge">漢</div>
+      <div>
+        <div class="brand-title">Nihongo-X v1</div>
+        <div class="brand-sub" id="progressSummary">Hafal: 0 / 60 kosakata</div>
+      </div>
+    </div>
+    <button class="icon-btn" onclick="resetProgress()">Reset Hafalan</button>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <div class="container">
+    <div class="card" style="padding:12px 14px;">
+      <div class="filter-grid" style="margin-bottom:0;">
+        <select id="levelFilter" onchange="onFilterChange()">
+          <option value="ALL">Semua Level (N5–N3)</option>
+          <option value="N5">JLPT N5</option>
+          <option value="N4">JLPT N4</option>
+          <option value="N3">JLPT N3</option>
+        </select>
+        <select id="catFilter" onchange="onFilterChange()">
+          <option value="ALL">Semua Kategori</option>
+          <option value="Transitif">Transitif (他動詞)</option>
+          <option value="Intransitif">Intransitif (自動詞)</option>
+          <option value="Dapur & 外食">Dapur & 外食</option>
+          <option value="Kosakata Umum">Kosakata Umum</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- MODE 1: TULIS KANJI DENGAN TANGAN -->
+    <section id="mode-kanji">
+      <div class="card">
+        <div class="section-title">
+          <span>Tulis Kanji dengan Tangan</span>
+          <span class="label-muted" id="kanjiCounter">1 / 60</span>
+        </div>
+
+        <div class="kanji-prompt-box">
+          <div class="label-muted" id="kanjiMeta">N5 · Kosakata Umum</div>
+          <div class="target-meaning" id="kanjiTargetMeaning">Air</div>
+          <div class="target-sub" id="kanjiTargetReading">Bacaan: みず (mizu) · Gambar Kanji utamanya di bawah</div>
+        </div>
+
+        <div class="canvas-wrap">
+          <div class="grid-crosshair"></div>
+          <div class="kanji-guide-layer hidden" id="kanjiGuide">水</div>
+          <canvas id="kanjiCanvas" width="340" height="340"></canvas>
+        </div>
+
+        <div class="canvas-actions">
+          <button type="button" class="btn btn-secondary" onclick="clearKanjiCanvas()">Hapus</button>
+          <button type="button" class="btn btn-secondary" id="guideToggleBtn" onclick="toggleGuide()">Panduan: OFF</button>
+          <button type="button" class="btn btn-secondary" onclick="revealKanjiDetail()">Cek Kunci</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button type="button" class="btn" onclick="markMasteredAndNext()">✓ Hafal & Lanjut</button>
+          <button type="button" class="btn btn-amber" onclick="nextKanjiItem()">↻ Lewati / Berikutnya</button>
+        </div>
+
+        <div class="answer-box hidden" id="kanjiAnswerBox"></div>
+      </div>
+    </section>
+
+    <!-- MODE 2: DRILL TERJEMAHAN -->
+    <section id="mode-drill" class="hidden">
+      <div class="card">
+        <div class="section-title">
+          <span>Drill Terjemahan Kata</span>
+          <span class="label-muted" id="drillCounter">1 / 60</span>
+        </div>
+
+        <div class="kanji-prompt-box">
+          <div class="label-muted" id="drillMeta">N5 · Transitif</div>
+          <div class="fc-kanji" style="font-size:34px;" id="drillWord">開ける</div>
+          <div class="target-sub" id="drillReading">あける (akeru)</div>
+        </div>
+
+        <div style="margin-bottom:10px;">
+          <input type="text" id="drillInput" placeholder="Ketik arti Indonesia (opsional sebelum cek kunci)..." />
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button type="button" class="btn btn-secondary" onclick="checkDrillAnswer()">Cek Arti & Contoh</button>
+          <button type="button" class="btn" onclick="nextDrillItem()">Soal Berikutnya</button>
+        </div>
+
+        <div class="answer-box hidden" id="drillAnswerBox"></div>
+      </div>
+    </section>
+
+    <!-- MODE 3: FLASHCARD -->
+    <section id="mode-flashcard" class="hidden">
+      <div class="card">
+        <div class="section-title">
+          <span>Flashcard (Ketuk untuk Balik)</span>
+          <span class="label-muted" id="fcCounter">1 / 60</span>
+        </div>
+
+        <div class="flashcard" onclick="flipFlashcard()">
+          <div id="fcFront">
+            <div class="label-muted" id="fcLevelCat">N5 · Dapur & 外食</div>
+            <div class="fc-kanji" id="fcKanji">洗う</div>
+            <div class="fc-reading" id="fcReading">あらう (arau)</div>
+            <div class="target-sub" style="margin-top:10px;">Ketuk kartu untuk melihat arti</div>
+          </div>
+          <div id="fcBack" class="hidden">
+            <div class="fc-meaning" id="fcMeaning">Mencuci</div>
+            <div class="target-sub" id="fcExample" style="margin-top:8px;">皿を洗います。(Sara o araimasu.) — Mencuci piring.</div>
+            <div class="target-sub" style="margin-top:10px;">Ketuk lagi untuk kembali ke depan</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
+          <button type="button" class="btn btn-secondary" onclick="prevFlashcard()">‹ Sebelumnya</button>
+          <button type="button" class="btn" onclick="nextFlashcard()">Berikutnya ›</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODE 4: DAFTAR KOSAKATA -->
+    <section id="mode-list" class="hidden">
+      <div class="card">
+        <div class="section-title">
+          <span>Daftar Kosakata</span>
+          <span class="label-muted" id="listCount">60 kata</span>
+        </div>
+        <div style="margin-bottom:10px;">
+          <input type="search" id="vocabSearch" placeholder="Cari kanji, kana, romaji, atau arti..." oninput="renderVocabList()" />
+        </div>
+        <div id="vocabListBox"></div>
+      </div>
+    </section>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-kanji" onclick="switchMode('kanji')">
+      <span>✍️</span>
+      <span>Tulis Kanji</span>
+    </button>
+    <button class="nav-btn" id="nav-drill" onclick="switchMode('drill')">
+      <span>📝</span>
+      <span>Drill Arti</span>
+    </button>
+    <button class="nav-btn" id="nav-flashcard" onclick="switchMode('flashcard')">
+      <span>🃏</span>
+      <span>Flashcard</span>
+    </button>
+    <button class="nav-btn" id="nav-list" onclick="switchMode('list')">
+      <span>📚</span>
+      <span>Kosakata</span>
+    </button>
+  </nav>
+
+  <script>
+    const VOCAB_DATA = [
+      { id: 1, level: 'N5', cat: 'Kosakata Umum', kanji: '水', targetKanji: '水', reading: 'みず (mizu)', meaning: 'Air', example: '水を飲みます。— Minum air.' },
+      { id: 2, level: 'N5', cat: 'Kosakata Umum', kanji: '火', targetKanji: '火', reading: 'ひ (hi)', meaning: 'Api', example: '火をつけます。— Menyalakan api.' },
+      { id: 3, level: 'N5', cat: 'Kosakata Umum', kanji: '食', targetKanji: '食', reading: 'たべる (taberu)', meaning: 'Makan', example: '朝ごはんを食べます。— Makan sarapan.' },
+      { id: 4, level: 'N5', cat: 'Kosakata Umum', kanji: '飲', targetKanji: '飲', reading: 'のむ (nomu)', meaning: 'Minum', example: 'コーヒーを飲みます。— Minum kopi.' },
+      { id: 5, level: 'N5', cat: 'Kosakata Umum', kanji: '行', targetKanji: '行', reading: 'いく (iku)', meaning: 'Pergi', example: '病院へ行きます。— Pergi ke rumah sakit.' },
+      { id: 6, level: 'N5', cat: 'Kosakata Umum', kanji: '来', targetKanji: '来', reading: 'くる (kuru)', meaning: 'Datang', example: '友だちが来ます。— Teman datang.' },
+      { id: 7, level: 'N5', cat: 'Kosakata Umum', kanji: '見', targetKanji: '見', reading: 'みる (miru)', meaning: 'Melihat', example: '説明書を見ます。— Melihat petunjuk.' },
+      { id: 8, level: 'N5', cat: 'Kosakata Umum', kanji: '聞', targetKanji: '聞', reading: 'きく (kiku)', meaning: 'Mendengar / Bertanya', example: '説明を聞きます。— Mendengarkan penjelasan.' },
+      { id: 9, level: 'N5', cat: 'Kosakata Umum', kanji: '書', targetKanji: '書', reading: 'かく (kaku)', meaning: 'Menulis', example: 'ノートに書きます。— Menulis di buku catatan.' },
+      { id: 10, level: 'N5', cat: 'Kosakata Umum', kanji: '読', targetKanji: '読', reading: 'よむ (yomu)', meaning: 'Membaca', example: 'マニュアルを読みます。— Membaca manual.' },
+      { id: 11, level: 'N5', cat: 'Kosakata Umum', kanji: '新', targetKanji: '新', reading: 'あたらしい (atarashii)', meaning: 'Baru', example: '新しい靴を買います。— Membeli sepatu baru.' },
+      { id: 12, level: 'N5', cat: 'Kosakata Umum', kanji: '古', targetKanji: '古', reading: 'ふるい (furui)', meaning: 'Lama / Tua', example: '古い建物です。— Bangunan lama.' },
+      { id: 13, level: 'N5', cat: 'Kosakata Umum', kanji: '高', targetKanji: '高', reading: 'たかい (takai)', meaning: 'Mahal / Tinggi', example: 'このかばんは高いです。— Tas ini mahal.' },
+      { id: 14, level: 'N5', cat: 'Kosakata Umum', kanji: '安', targetKanji: '安', reading: 'やすい (yasui)', meaning: 'Murah', example: '野菜が安いです。— Sayuran murah.' },
+      { id: 15, level: 'N5', cat: 'Kosakata Umum', kanji: '大', targetKanji: '大', reading: 'おおきい (ookii)', meaning: 'Besar', example: '大きい箱です。— Kotak besar.' },
+      { id: 16, level: 'N5', cat: 'Kosakata Umum', kanji: '小', targetKanji: '小', reading: 'ちいさい (chiisai)', meaning: 'Kecil', example: '小さい皿を使います。— Memakai piring kecil.' },
+      { id: 17, level: 'N5', cat: 'Kosakata Umum', kanji: '日', targetKanji: '日', reading: 'ひ / にち (hi / nichi)', meaning: 'Hari / Matahari', example: '今日はいい天気です。— Hari ini cuaca bagus.' },
+      { id: 18, level: 'N5', cat: 'Kosakata Umum', kanji: '月', targetKanji: '月', reading: 'つき / がつ (tsuki / gatsu)', meaning: 'Bulan', example: '来月日本へ行きます。— Bulan depan pergi ke Jepang.' },
+      { id: 19, level: 'N5', cat: 'Kosakata Umum', kanji: '人', targetKanji: '人', reading: 'ひと (hito)', meaning: 'Orang', example: 'たくさんの人がいます。— Ada banyak orang.' },
+      { id: 20, level: 'N5', cat: 'Kosakata Umum', kanji: '時', targetKanji: '時', reading: 'じ / とき (ji / toki)', meaning: 'Jam / Waktu', example: '今何時ですか。— Sekarang jam berapa?' },
+
+      { id: 21, level: 'N4', cat: 'Transitif', kanji: '開ける', targetKanji: '開', reading: 'あける (akeru)', meaning: 'Membuka (transitif)', example: 'ドアを開けます。— Membuka pintu.' },
+      { id: 22, level: 'N4', cat: 'Intransitif', kanji: '開く', targetKanji: '開', reading: 'あく (aku)', meaning: 'Terbuka (intransitif)', example: 'ドアが開きます。— Pintu terbuka.' },
+      { id: 23, level: 'N4', cat: 'Transitif', kanji: '閉める', targetKanji: '閉', reading: 'しめる (shimeru)', meaning: 'Menutup (transitif)', example: '窓を閉めます。— Menutup jendela.' },
+      { id: 24, level: 'N4', cat: 'Intransitif', kanji: '閉まる', targetKanji: '閉', reading: 'しまる (shimaru)', meaning: 'Tertutup (intransitif)', example: '窓が閉まります。— Jendela tertutup.' },
+      { id: 25, level: 'N4', cat: 'Transitif', kanji: 'つける', targetKanji: '付', reading: 'つける (tsukeru)', meaning: 'Menyalakan (transitif)', example: '電気をつけます。— Menyalakan lampu.' },
+      { id: 26, level: 'N4', cat: 'Intransitif', kanji: 'つく', targetKanji: '付', reading: 'つく (tsuku)', meaning: 'Menyala (intransitif)', example: '電気がつきます。— Lampu menyala.' },
+      { id: 27, level: 'N4', cat: 'Transitif', kanji: '消す', targetKanji: '消', reading: 'けす (kesu)', meaning: 'Mematikan / Menghapus (transitif)', example: '火を消します。— Mematikan api.' },
+      { id: 28, level: 'N4', cat: 'Intransitif', kanji: '消える', targetKanji: '消', reading: 'きえる (kieru)', meaning: 'Padam / Menghilang (intransitif)', example: '火が消えます。— Api padam.' },
+      { id: 29, level: 'N4', cat: 'Transitif', kanji: '始める', targetKanji: '始', reading: 'はじめる (hajimeru)', meaning: 'Memulai (transitif)', example: '仕事を始めます。— Memulai pekerjaan.' },
+      { id: 30, level: 'N4', cat: 'Intransitif', kanji: '始まる', targetKanji: '始', reading: 'はじまる (hajimaru)', meaning: 'Dimulai (intransitif)', example: '会議が始まります。— Rapat dimulai.' },
+      { id: 31, level: 'N4', cat: 'Transitif', kanji: '落とす', targetKanji: '落', reading: 'おとす (otosu)', meaning: 'Menjatuhkan (transitif)', example: 'スマホを落とします。— Menjatuhkan ponsel.' },
+      { id: 32, level: 'N4', cat: 'Intransitif', kanji: '落ちる', targetKanji: '落', reading: 'おちる (ochiru)', meaning: 'Jatuh (intransitif)', example: '葉っぱが落ちます。— Daun jatuh.' },
+      { id: 33, level: 'N4', cat: 'Transitif', kanji: '壊す', targetKanji: '壊', reading: 'こわす (kowasu)', meaning: 'Merusak (transitif)', example: '機械を壊さないでください。— Jangan merusak mesin.' },
+      { id: 34, level: 'N4', cat: 'Intransitif', kanji: '壊れる', targetKanji: '壊', reading: 'こわれる (kowareru)', meaning: 'Rusak (intransitif)', example: '充電器が壊れました。— Charger rusak.' },
+      { id: 35, level: 'N4', cat: 'Transitif', kanji: '集める', targetKanji: '集', reading: 'あつめる (atsumeru)', meaning: 'Mengumpulkan (transitif)', example: 'ゴミを集めます。— Mengumpulkan sampah.' },
+      { id: 36, level: 'N4', cat: 'Intransitif', kanji: '集まる', targetKanji: '集', reading: 'あつまる (atsumaru)', meaning: 'Berkumpul (intransitif)', example: '駅前に集まります。— Berkumpul di depan stasiun.' },
+      { id: 37, level: 'N4', cat: 'Kosakata Umum', kanji: '練習', targetKanji: '練', reading: 'れんしゅう (renshuu)', meaning: 'Latihan', example: '毎日日本語を練習します。— Latihan bahasa Jepang tiap hari.' },
+      { id: 38, level: 'N4', cat: 'Kosakata Umum', kanji: '準備', targetKanji: '準', reading: 'じゅんび (junbi)', meaning: 'Persiapan', example: '食事の準備をします。— Menyiapkan makanan.' },
+      { id: 39, level: 'N4', cat: 'Kosakata Umum', kanji: '注意', targetKanji: '注', reading: 'ちゅうい (chuui)', meaning: 'Perhatian / Peringatan', example: '熱湯に注意してください。— Hati-hati air panas.' },
+      { id: 40, level: 'N4', cat: 'Kosakata Umum', kanji: '説明', targetKanji: '説', reading: 'せつめい (setsumei)', meaning: 'Penjelasan', example: 'ルールを説明します。— Menjelaskan aturan.' },
+
+      { id: 41, level: 'N3', cat: 'Transitif', kanji: '片付ける', targetKanji: '片', reading: 'かたづける (katadzukeru)', meaning: 'Membereskan / Merapikan (transitif)', example: 'キッチンを片付けます。— Membereskan dapur.' },
+      { id: 42, level: 'N3', cat: 'Intransitif', kanji: '片付く', targetKanji: '片', reading: 'かたづく (katadzuku)', meaning: 'Terbereskan (intransitif)', example: '部屋が片付きました。— Kamar sudah rapi.' },
+      { id: 43, level: 'N3', cat: 'Transitif', kanji: '揃える', targetKanji: '揃', reading: 'そろえる (soroeru)', meaning: 'Menyamakan / Melengkapi set (transitif)', example: '皿を揃えます。— Menyamakan/menyiapkan set piring.' },
+      { id: 44, level: 'N3', cat: 'Intransitif', kanji: '揃う', targetKanji: '揃', reading: 'そろう (sorou)', meaning: 'Lengkap / Terkumpul semua (intransitif)', example: '材料が揃いました。— Bahan sudah lengkap.' },
+      { id: 45, level: 'N3', cat: 'Transitif', kanji: '混ぜる', targetKanji: '混', reading: 'まぜる (mazeru)', meaning: 'Mencampur / Mengaduk (transitif)', example: '具材をよく混ぜます。— Mencampur bahan dengan rata.' },
+      { id: 46, level: 'N3', cat: 'Intransitif', kanji: '混ざる', targetKanji: '混', reading: 'まざる (mazaru)', meaning: 'Tercampur (intransitif)', example: '水と油は混ざりません。— Air dan minyak tidak bercampur.' },
+      { id: 47, level: 'N3', cat: 'Transitif', kanji: '冷ます', targetKanji: '冷', reading: 'さます (samasu)', meaning: 'Mendinginkan (transitif)', example: 'スープを少し冷まします。— Mendinginkan sup sebentar.' },
+      { id: 48, level: 'N3', cat: 'Intransitif', kanji: '冷める', targetKanji: '冷', reading: 'さめる (sameru)', meaning: 'Menjadi dingin (intransitif)', example: 'ご飯が冷めました。— Nasi sudah dingin.' },
+
+      { id: 49, level: 'N5', cat: 'Dapur & 外食', kanji: '洗う', targetKanji: '洗', reading: 'あらう (arau)', meaning: 'Mencuci', example: '野菜と皿を洗います。— Mencuci sayur dan piring.' },
+      { id: 50, level: 'N5', cat: 'Dapur & 外食', kanji: '切る', targetKanji: '切', reading: 'きる (kiru)', meaning: 'Memotong / Mengiris', example: 'にんじんを小さく切ります。— Mengiris wortel kecil-kecil.' },
+      { id: 51, level: 'N5', cat: 'Dapur & 外食', kanji: '焼く', targetKanji: '焼', reading: 'やく (yaku)', meaning: 'Memanggang / Menggoreng pan', example: '卵と肉を焼きます。— Memanggang/menggoreng telur dan daging.' },
+      { id: 52, level: 'N4', cat: 'Dapur & 外食', kanji: '沸かす', targetKanji: '沸', reading: 'わかす (wakasu)', meaning: 'Merebus air (transitif)', example: 'お湯を沸かします。— Merebus air panas.' },
+      { id: 53, level: 'N4', cat: 'Dapur & 外食', kanji: '沸く', targetKanji: '沸', reading: 'わく (waku)', meaning: 'Air mendidih (intransitif)', example: 'お湯が沸きました。— Air panas sudah mendidih.' },
+      { id: 54, level: 'N4', cat: 'Dapur & 外食', kanji: '拭く', targetKanji: '拭', reading: 'ふく (fuku)', meaning: 'Mengelap', example: 'テーブルと換気扇を拭きます。— Mengelap meja dan exhaust fan.' },
+      { id: 55, level: 'N4', cat: 'Dapur & 外食', kanji: '運ぶ', targetKanji: '運', reading: 'はこぶ (hakobu)', meaning: 'Membawa / Mengangkut', example: 'トレイを運びます。— Membawa nampan.' },
+      { id: 56, level: 'N3', cat: 'Dapur & 外食', kanji: '盛り付ける', targetKanji: '盛', reading: 'もりつける (moritsukeru)', meaning: 'Menata porsi ke piring/mangkuk', example: 'ご飯と料理を盛り付けます。— Menata porsi nasi dan lauk.' },
+      { id: 57, level: 'N3', cat: 'Dapur & 外食', kanji: '廃棄', targetKanji: '廃', reading: 'はいき (haiki)', meaning: 'Pembuangan / Disposal', example: '残飯や廃棄物を分けます。— Memilah sisa makanan/limbah.' },
+      { id: 58, level: 'N3', cat: 'Dapur & 外食', kanji: '衛生', targetKanji: '衛', reading: 'えいせい (eisei)', meaning: 'Higienis / Sanitasi', example: '手洗いと衛生管理を徹底します。— Menjaga cuci tangan dan sanitasi.' },
+      { id: 59, level: 'N3', cat: 'Dapur & 外食', kanji: '報告', targetKanji: '報', reading: 'ほうこく (houkoku)', meaning: 'Laporan', example: '今日の作業を日報で報告します。— Melaporkan kerja hari ini di laporan harian.' },
+      { id: 60, level: 'N3', cat: 'Dapur & 外食', kanji: '確認', targetKanji: '確', reading: 'かくにん (kakunin)', meaning: 'Konfirmasi / Mengecek ulang', example: '数量と期限を確認します。— Mengecek jumlah dan batas waktu.' }
+    ];
+
+    const STORAGE_KEY = 'nihongo_x_v1_mastered';
+    let masteredIds = loadMastered();
+    let currentMode = 'kanji';
+    let guideVisible = false;
+    let fcFlipped = false;
+
+    let kanjiIdx = 0;
+    let drillIdx = 0;
+    let fcIdx = 0;
+
+    function loadMastered() {
+      try {
+        const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveMastered() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(masteredIds));
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(window.__toastT);
+      window.__toastT = setTimeout(() => el.classList.add('hidden'), 2000);
+    }
+
+    function getFilteredList() {
+      const lvl = document.getElementById('levelFilter').value;
+      const cat = document.getElementById('catFilter').value;
+      const list = VOCAB_DATA.filter(item => {
+        if (lvl !== 'ALL' && item.level !== lvl) return false;
+        if (cat !== 'ALL' && item.cat !== cat) return false;
+        return true;
+      });
+      return list.length ? list : VOCAB_DATA;
+    }
+
+    function onFilterChange() {
+      kanjiIdx = 0;
+      drillIdx = 0;
+      fcIdx = 0;
+      fcFlipped = false;
+      document.getElementById('kanjiAnswerBox').classList.add('hidden');
+      document.getElementById('drillAnswerBox').classList.add('hidden');
+      clearKanjiCanvas();
+      renderAll();
+    }
+
+    function switchMode(mode) {
+      currentMode = mode;
+      ['kanji', 'drill', 'flashcard', 'list'].forEach(m => {
+        document.getElementById('mode-' + m).classList.toggle('hidden', m !== mode);
+        document.getElementById('nav-' + m).classList.toggle('active', m === mode);
+      });
+      renderAll();
+    }
+
+    // --- CANVAS TULIS KANJI ---
+    const canvas = document.getElementById('kanjiCanvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let lastPt = null;
+
+    function setupCanvasStyle() {
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 14;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+
+    function getCanvasPoint(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+      };
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      canvas.setPointerCapture(e.pointerId);
+      drawing = true;
+      lastPt = getCanvasPoint(e);
+      setupCanvasStyle();
+      ctx.beginPath();
+      ctx.arc(lastPt.x, lastPt.y, ctx.lineWidth / 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fill();
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!drawing) return;
+      e.preventDefault();
+      const pt = getCanvasPoint(e);
+      setupCanvasStyle();
+      ctx.beginPath();
+      ctx.moveTo(lastPt.x, lastPt.y);
+      ctx.lineTo(pt.x, pt.y);
+      ctx.stroke();
+      lastPt = pt;
+    });
+
+    function endStroke(e) {
+      if (!drawing) return;
+      drawing = false;
+      lastPt = null;
+      if (e && e.pointerId !== undefined && canvas.hasPointerCapture(e.pointerId)) {
+        canvas.releasePointerCapture(e.pointerId);
+      }
+    }
+
+    canvas.addEventListener('pointerup', endStroke);
+    canvas.addEventListener('pointercancel', endStroke);
+
+    function clearKanjiCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function toggleGuide() {
+      guideVisible = !guideVisible;
+      document.getElementById('kanjiGuide').classList.toggle('hidden', !guideVisible);
+      const btn = document.getElementById('guideToggleBtn');
+      btn.textContent = `Panduan: ${guideVisible ? 'ON' : 'OFF'}`;
+      btn.classList.toggle('active', guideVisible);
+    }
+
+    function revealKanjiDetail() {
+      const list = getFilteredList();
+      const item = list[kanjiIdx % list.length];
+      const box = document.getElementById('kanjiAnswerBox');
+      box.innerHTML = `
+        <div><strong>Kanji Target:</strong> <span style="font-size:28px;font-weight:800;">${item.targetKanji}</span> (${item.kanji})</div>
+        <div style="margin-top:4px;"><strong>Bacaan:</strong> ${item.reading} · <strong>Arti:</strong> ${item.meaning}</div>
+        <div style="margin-top:4px;color:var(--muted);">${item.example}</div>
+      `;
+      box.classList.remove('hidden');
+    }
+
+    function nextKanjiItem() {
+      const list = getFilteredList();
+      kanjiIdx = (kanjiIdx + 1) % list.length;
+      document.getElementById('kanjiAnswerBox').classList.add('hidden');
+      clearKanjiCanvas();
+      renderAll();
+    }
+
+    function markMasteredAndNext() {
+      const list = getFilteredList();
+      const item = list[kanjiIdx % list.length];
+      if (!masteredIds.includes(item.id)) {
+        masteredIds.push(item.id);
+        saveMastered();
+      }
+      showToast(`Ditandai hafal: ${item.targetKanji} (${item.meaning})`);
+      nextKanjiItem();
+    }
+
+    // --- DRILL ---
+    function checkDrillAnswer() {
+      const list = getFilteredList();
+      const item = list[drillIdx % list.length];
+      const userAns = (document.getElementById('drillInput').value || '').trim();
+      const box = document.getElementById('drillAnswerBox');
+      box.innerHTML = `
+        ${userAns ? `<div style="margin-bottom:4px;color:var(--muted);">Jawabanmu: <strong>${escapeHtml(userAns)}</strong></div>` : ''}
+        <div><strong>Arti:</strong> <span style="color:var(--green);font-weight:700;">${escapeHtml(item.meaning)}</span></div>
+        <div style="margin-top:4px;color:var(--muted);">${escapeHtml(item.example)}</div>
+      `;
+      box.classList.remove('hidden');
+    }
+
+    function nextDrillItem() {
+      const list = getFilteredList();
+      drillIdx = (drillIdx + 1) % list.length;
+      document.getElementById('drillInput').value = '';
+      document.getElementById('drillAnswerBox').classList.add('hidden');
+      renderAll();
+    }
+
+    // --- FLASHCARD ---
+    function flipFlashcard() {
+      fcFlipped = !fcFlipped;
+      document.getElementById('fcFront').classList.toggle('hidden', fcFlipped);
+      document.getElementById('fcBack').classList.toggle('hidden', !fcFlipped);
+    }
+
+    function nextFlashcard() {
+      const list = getFilteredList();
+      fcIdx = (fcIdx + 1) % list.length;
+      fcFlipped = false;
+      document.getElementById('fcFront').classList.remove('hidden');
+      document.getElementById('fcBack').classList.add('hidden');
+      renderAll();
+    }
+
+    function prevFlashcard() {
+      const list = getFilteredList();
+      fcIdx = (fcIdx - 1 + list.length) % list.length;
+      fcFlipped = false;
+      document.getElementById('fcFront').classList.remove('hidden');
+      document.getElementById('fcBack').classList.add('hidden');
+      renderAll();
+    }
+
+    // --- VOCAB LIST ---
+    function practiceKanjiById(id) {
+      const list = getFilteredList();
+      const foundIdx = list.findIndex(x => x.id === id);
+      if (foundIdx !== -1) {
+        kanjiIdx = foundIdx;
+      } else {
+        document.getElementById('levelFilter').value = 'ALL';
+        document.getElementById('catFilter').value = 'ALL';
+        const fullIdx = VOCAB_DATA.findIndex(x => x.id === id);
+        kanjiIdx = fullIdx >= 0 ? fullIdx : 0;
+      }
+      document.getElementById('kanjiAnswerBox').classList.add('hidden');
+      clearKanjiCanvas();
+      switchMode('kanji');
+    }
+
+    function renderVocabList() {
+      const q = (document.getElementById('vocabSearch')?.value || '').toLowerCase().trim();
+      const list = getFilteredList().filter(item => {
+        if (!q) return true;
+        return `${item.kanji} ${item.targetKanji} ${item.reading} ${item.meaning} ${item.level} ${item.cat}`
+          .toLowerCase().includes(q);
+      });
+      document.getElementById('listCount').textContent = `${list.length} kata`;
+      document.getElementById('vocabListBox').innerHTML = list.map(item => {
+        const isDone = masteredIds.includes(item.id);
+        return `
+          <div class="vocab-row">
+            <div>
+              <div style="font-weight:800;font-size:15px;">
+                ${escapeHtml(item.kanji)}
+                <span class="badge ${isDone ? '' : 'badge-amber'}">${item.level} · ${isDone ? 'Hafal' : item.cat}</span>
+              </div>
+              <div class="target-sub">${escapeHtml(item.reading)} — ${escapeHtml(item.meaning)}</div>
+            </div>
+            <button type="button" class="icon-btn" onclick="practiceKanjiById(${item.id})">Tulis</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function resetProgress() {
+      if (!confirm('Reset semua penanda hafal kosakata?')) return;
+      masteredIds = [];
+      saveMastered();
+      renderAll();
+      showToast('Penanda hafal direset');
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    function renderAll() {
+      const list = getFilteredList();
+      document.getElementById('progressSummary').textContent =
+        `Hafal: ${masteredIds.length} / ${VOCAB_DATA.length} kosakata`;
+
+      const kItem = list[kanjiIdx % list.length];
+      document.getElementById('kanjiCounter').textContent = `${(kanjiIdx % list.length) + 1} / ${list.length}`;
+      document.getElementById('kanjiMeta').textContent = `${kItem.level} · ${kItem.cat}`;
+      document.getElementById('kanjiTargetMeaning').textContent = kItem.meaning;
+      document.getElementById('kanjiTargetReading').textContent = `Bacaan: ${kItem.reading} · Tulis Kanji: ${kItem.targetKanji}`;
+      document.getElementById('kanjiGuide').textContent = kItem.targetKanji;
+
+      const dItem = list[drillIdx % list.length];
+      document.getElementById('drillCounter').textContent = `${(drillIdx % list.length) + 1} / ${list.length}`;
+      document.getElementById('drillMeta').textContent = `${dItem.level} · ${dItem.cat}`;
+      document.getElementById('drillWord').textContent = dItem.kanji;
+      document.getElementById('drillReading').textContent = dItem.reading;
+
+      const fItem = list[fcIdx % list.length];
+      document.getElementById('fcCounter').textContent = `${(fcIdx % list.length) + 1} / ${list.length}`;
+      document.getElementById('fcLevelCat').textContent = `${fItem.level} · ${fItem.cat}`;
+      document.getElementById('fcKanji').textContent = fItem.kanji;
+      document.getElementById('fcReading').textContent = fItem.reading;
+      document.getElementById('fcMeaning').textContent = fItem.meaning;
+      document.getElementById('fcExample').textContent = fItem.example;
+
+      renderVocabList();
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>
