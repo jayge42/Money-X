@@ -109,7 +109,7 @@
 
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 8px;
     }
     .stat-box {
@@ -153,6 +153,7 @@
       font-size: 14px;
       font-weight: 700;
       margin-bottom: 10px;
+      gap: 8px;
     }
 
     .asset-item, .tx-item {
@@ -228,6 +229,8 @@
     .tag-income { background: rgba(16, 185, 129, 0.16); color: #6ee7b7; }
     .tag-liability { background: rgba(245, 158, 11, 0.16); color: #fcd34d; }
     .tag-transfer { background: rgba(59, 130, 246, 0.18); color: #93c5fd; }
+    .tag-low { background: rgba(245, 158, 11, 0.18); color: #fcd34d; }
+    .tag-empty { background: rgba(244, 63, 94, 0.18); color: #fda4af; }
 
     .ocr-box {
       background: var(--surface-2);
@@ -354,8 +357,12 @@
             <div class="stat-val" id="statToday" style="color:#fcd34d;">Rp 0</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">Total Hutang</div>
+            <div class="stat-label">Total Auto-Debit Pending</div>
             <div class="stat-val" id="statDebt" style="color:#f87171;">Rp 0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Jatuh Tempo Bulan Depan</div>
+            <div class="stat-val" id="statNextMonthDue" style="color:#fbbf24;">Rp 0</div>
           </div>
         </div>
 
@@ -389,6 +396,9 @@
 
         <div class="filters">
           <input type="search" id="searchInput" class="full" placeholder="Cari catatan, kategori, barang, atau aset..." oninput="renderAll()" />
+          <select id="assetFilter" onchange="renderAll()">
+            <option value="ALL">Semua Akun Aset</option>
+          </select>
           <select id="typeFilter" onchange="renderAll()">
             <option value="ALL">Semua Tipe</option>
             <option value="Expense">Expense</option>
@@ -437,12 +447,40 @@
 
       <div class="card">
         <div class="section-title">
-          <span>Pencatatan Stok & Belanjaan</span>
+          <span>Logbook Stok Barang & Belanjaan</span>
           <span class="label-muted" id="itemCountBadge">0 item</span>
         </div>
         <p class="asset-meta" style="margin-top:0;margin-bottom:10px;">
           Format otomatis: <em>Brand - Product Type - Store</em> (English). Foto struk tidak disimpan.
         </p>
+
+        <form onsubmit="handleDirectStockSubmit(event)" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+          <div class="form-group" style="margin-bottom:8px;">
+            <label for="sName">Tambah / Restok Barang Rumah Langsung</label>
+            <input type="text" id="sName" placeholder="Contoh: Blendy - Instant Coffee Latte - Seicomart Sapporo" required />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div>
+              <label for="sQty">Jumlah Stok</label>
+              <input type="number" min="0" step="1" id="sQty" value="1" required />
+            </div>
+            <div>
+              <label for="sMin">Batas Minimum</label>
+              <input type="number" min="0" step="1" id="sMin" value="1" />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-green">+ Simpan ke Logbook Stok</button>
+        </form>
+
+        <div class="filters">
+          <input type="search" id="stockSearch" placeholder="Cari barang di logbook stok..." oninput="renderAll()" />
+          <select id="stockStatusFilter" onchange="renderAll()">
+            <option value="ALL">Semua Stok</option>
+            <option value="LOW">Menipis / Batas Min</option>
+            <option value="EMPTY">Habis (0)</option>
+          </select>
+        </div>
+
         <div id="groceryList"></div>
       </div>
     </section>
@@ -468,7 +506,7 @@
         <button class="menu-tile" onclick="openQuickForm('Liability')">
           <span class="menu-icon">🧾</span>
           <div class="menu-title">Input Liability</div>
-          <div class="menu-desc">Catat hutang atau tagihan berjalan</div>
+          <div class="menu-desc">Catat hutang & auto-debit tanggal pelunasan</div>
         </button>
       </div>
 
@@ -487,7 +525,7 @@
               <option value="Expense">Expense (Pengeluaran)</option>
               <option value="Income">Income (Pemasukan)</option>
               <option value="Transfer">Transfer (Antar Aset / Valas)</option>
-              <option value="Liability">Liability (Hutang)</option>
+              <option value="Liability">Liability (Hutang / Auto-Debit)</option>
             </select>
           </div>
 
@@ -520,11 +558,11 @@
 
           <div class="form-group" id="groupCategory">
             <label for="fCategory">Kategori</label>
-            <input type="text" id="fCategory" placeholder="Contoh: Makanan, Belanja Bulanan, Gaji" required />
+            <input type="text" id="fCategory" placeholder="Contoh: Makanan, Belanja Bulanan, Kartu Kredit" required />
           </div>
 
           <div class="form-group" id="groupSource">
-            <label for="fSource">Sumber Dana / Akun</label>
+            <label for="fSource">Sumber Dana / Akun Auto-Debit</label>
             <select id="fSource" onchange="autoMatchCurrency()"></select>
           </div>
 
@@ -543,8 +581,13 @@
           </div>
 
           <div class="form-group">
-            <label for="fAmount">Nominal</label>
+            <label for="fAmount" id="labelAmount">Nominal (atau Nominal per Cicilan jika > 1 bulan)</label>
             <input type="number" step="any" id="fAmount" placeholder="0" required />
+          </div>
+
+          <div class="form-group hidden" id="groupInstallments">
+            <label for="fInstallments">Jumlah Bulan Cicilan / Auto-Debit (1 = sekali bayar)</label>
+            <input type="number" min="1" max="60" step="1" id="fInstallments" value="1" />
           </div>
 
           <div class="form-group hidden" id="groupTargetAmount">
@@ -553,8 +596,13 @@
           </div>
 
           <div class="form-group">
-            <label for="fDate">Tanggal</label>
+            <label for="fDate" id="labelDate">Tanggal</label>
             <input type="date" id="fDate" required />
+          </div>
+
+          <div class="form-group hidden" id="groupDueDate">
+            <label for="fDueDate">Tanggal Pelunasan Pertama / Auto-Debit (saldo terpotong & tercatat sebagai Expense saat tanggal ini)</label>
+            <input type="date" id="fDueDate" />
           </div>
 
           <div class="form-group">
@@ -659,7 +707,7 @@
   </nav>
 
   <script>
-    const STORAGE_KEY = 'money_x_pro_state_v5';
+    const STORAGE_KEY = 'money_x_pro_state_v7';
     const CURRENCIES = ['IDR', 'JPY', 'USD'];
 
     const DEFAULT_STATE = {
@@ -711,17 +759,29 @@
     let parsedFormattedItems = [];
     let parsedOcrAmount = null;
 
+    function normalizeImportedState(parsed, keepSyncUrl = '') {
+      const base = structuredClone(DEFAULT_STATE);
+      return {
+        ...base,
+        ...parsed,
+        syncUrl: parsed.syncUrl || keepSyncUrl || '',
+        ratesToIDR: { ...base.ratesToIDR, ...(parsed.ratesToIDR || {}) },
+        rateMeta: { ...base.rateMeta, ...(parsed.rateMeta || {}) },
+        assets: Array.isArray(parsed.assets) ? parsed.assets : base.assets,
+        transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+        groceries: Array.isArray(parsed.groceries) ? parsed.groceries.map(g => ({
+          ...g,
+          stock: Number(g.stock) ?? 1,
+          minStock: Number(g.minStock) ?? 1
+        })) : []
+      };
+    }
+
     function loadState() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('money_x_pro_state_v6') || localStorage.getItem('money_x_pro_state_v5');
         if (!raw) return structuredClone(DEFAULT_STATE);
-        const parsed = JSON.parse(raw);
-        return {
-          ...structuredClone(DEFAULT_STATE),
-          ...parsed,
-          ratesToIDR: { ...DEFAULT_STATE.ratesToIDR, ...(parsed.ratesToIDR || {}) },
-          rateMeta: { ...DEFAULT_STATE.rateMeta, ...(parsed.rateMeta || {}) }
-        };
+        return normalizeImportedState(JSON.parse(raw));
       } catch {
         return structuredClone(DEFAULT_STATE);
       }
@@ -791,9 +851,7 @@
             if (forceUserAction) showToast(`Kurs online diperbarui (1 USD ≈ ${usdToIdr.toLocaleString('id-ID')} IDR)`);
             return;
           }
-        } catch {
-          // coba endpoint berikutnya
-        }
+        } catch {}
       }
 
       if (forceUserAction) showToast('Gagal ambil kurs online — cek koneksi/pemblokir');
@@ -832,6 +890,104 @@
     function todayISO() { return new Date().toISOString().slice(0, 10); }
     function currentMonthPrefix() { return new Date().toISOString().slice(0, 7); }
 
+    function nextMonthOffsetISO(baseDateStr, monthOffset = 1) {
+      const base = new Date((baseDateStr || todayISO()) + 'T00:00:00');
+      const target = new Date(base.getFullYear(), base.getMonth() + monthOffset, base.getDate());
+      const yyyy = target.getFullYear();
+      const mm = String(target.getMonth() + 1).padStart(2, '0');
+      const dd = String(target.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function nextCalendarMonthPrefix() {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    // --- AUTO-DEBIT LIABILITY SAAT TANGGAL PELUNASAN TIBA ---
+    function processDueAutoDebits(silent = true) {
+      const today = todayISO();
+      let settledCount = 0;
+
+      state.transactions.forEach(tx => {
+        if (tx.type === 'Liability' && tx.status !== 'Paid') {
+          const dueDate = tx.dueDate || tx.date;
+          if (dueDate <= today) {
+            settleLiabilityItem(tx, true);
+            settledCount++;
+          }
+        }
+      });
+
+      if (settledCount > 0) {
+        saveState();
+        if (!silent) {
+          showToast(`${settledCount} auto-debit jatuh tempo diproses ke Expense`);
+        }
+      }
+    }
+
+    function settleLiabilityItem(tx, skipSave = false) {
+      if (!tx || tx.type !== 'Liability' || tx.status === 'Paid') return;
+      const settleDate = tx.dueDate || todayISO();
+      const srcName = state.assets.find(a => a.id === tx.sourceAssetId)?.name || 'Akun';
+
+      const expenseTx = {
+        id: 'TX-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+        type: 'Expense',
+        category: tx.category || 'Auto-Debit Hutang',
+        sourceAssetId: tx.sourceAssetId,
+        targetAssetId: '',
+        currency: tx.currency,
+        amount: Number(tx.amount) || 0,
+        targetAmount: null,
+        date: settleDate,
+        note: `Auto-Debit Pelunasan (${srcName})${tx.note ? ' · ' + tx.note : ''}`,
+        linkedLiabilityId: tx.id
+      };
+
+      applyTransactionEffect(expenseTx, 1);
+      tx.status = 'Paid';
+      tx.paidDate = todayISO();
+      tx.expenseTxId = expenseTx.id;
+      state.transactions.unshift(expenseTx);
+
+      if (!skipSave) {
+        saveState();
+        renderAll();
+        showToast('Hutang dilunasi & tercatat sebagai Expense');
+      }
+    }
+
+    // Batalkan auto-debit yang sudah terproses: kembalikan saldo & hapus transaksi Expense terkait
+    function revertLiabilitySettlement(id) {
+      const tx = state.transactions.find(t => t.id === id);
+      if (!tx || tx.type !== 'Liability' || tx.status !== 'Paid') return;
+      if (!confirm('Batalkan pelunasan auto-debit ini dan kembalikan saldo akun?')) return;
+
+      const expIdx = state.transactions.findIndex(t =>
+        (tx.expenseTxId && t.id === tx.expenseTxId) || t.linkedLiabilityId === tx.id
+      );
+      if (expIdx !== -1) {
+        applyTransactionEffect(state.transactions[expIdx], -1);
+        state.transactions.splice(expIdx, 1);
+      } else {
+        const src = state.assets.find(a => a.id === tx.sourceAssetId);
+        if (src) {
+          src.balance = (Number(src.balance) || 0) + convertCurrency(Number(tx.amount) || 0, tx.currency, src.currency);
+        }
+      }
+
+      tx.status = 'Pending';
+      delete tx.paidDate;
+      delete tx.expenseTxId;
+
+      saveState();
+      renderAll();
+      showToast('Auto-debit dibatalkan & saldo dikembalikan');
+    }
+
     function openQuickForm(type) {
       if (type === 'Aset') {
         switchTab('input');
@@ -841,12 +997,16 @@
       switchTab('input');
       document.getElementById('editId').value = '';
       document.getElementById('fType').value = type;
-      document.getElementById('fDate').value = todayISO();
+      const nowISO = todayISO();
+      document.getElementById('fDate').value = nowISO;
+      document.getElementById('fDueDate').value = type === 'Liability' ? nextMonthOffsetISO(nowISO, 1) : '';
+      document.getElementById('fInstallments').value = '1';
       document.getElementById('fAmount').value = '';
       document.getElementById('fTargetAmount').value = '';
       document.getElementById('fNote').value = '';
       document.getElementById('fItems').value = '';
-      document.getElementById('fCategory').value = type === 'Transfer' ? 'Transfer Antar Aset' : '';
+      document.getElementById('fCategory').value =
+        type === 'Transfer' ? 'Transfer Antar Aset' : (type === 'Liability' ? 'Auto-Debit Tagihan' : '');
       clearReceiptPhoto();
       syncFormFields();
       autoMatchCurrency();
@@ -857,8 +1017,10 @@
       document.getElementById('fType').value = 'Expense';
       document.getElementById('fCategory').value = '';
       document.getElementById('fAmount').value = '';
+      document.getElementById('fInstallments').value = '1';
       document.getElementById('fTargetAmount').value = '';
       document.getElementById('fDate').value = todayISO();
+      document.getElementById('fDueDate').value = '';
       document.getElementById('fNote').value = '';
       document.getElementById('fItems').value = '';
       document.getElementById('cancelEditBtn').classList.add('hidden');
@@ -870,10 +1032,18 @@
     function syncFormFields() {
       const type = document.getElementById('fType').value;
       const isTransfer = type === 'Transfer';
+      const isLiability = type === 'Liability';
+      const isEdit = Boolean(document.getElementById('editId').value);
       document.getElementById('groupTarget').classList.toggle('hidden', !isTransfer);
       document.getElementById('groupTargetAmount').classList.toggle('hidden', !isTransfer);
       document.getElementById('groupItems').classList.toggle('hidden', type !== 'Expense');
       document.getElementById('ocrSection').classList.toggle('hidden', type !== 'Expense');
+      document.getElementById('groupDueDate').classList.toggle('hidden', !isLiability);
+      document.getElementById('groupInstallments').classList.toggle('hidden', !isLiability || isEdit);
+      document.getElementById('labelDate').textContent = isLiability ? 'Tanggal Cetak Hutang / Tagihan' : 'Tanggal';
+      if (isLiability && !document.getElementById('fDueDate').value) {
+        document.getElementById('fDueDate').value = nextMonthOffsetISO(document.getElementById('fDate').value, 1);
+      }
       document.getElementById('formTitle').textContent = 'Form Input ' + type;
     }
 
@@ -886,13 +1056,22 @@
     function populateAssetSelects() {
       const srcSel = document.getElementById('fSource');
       const tgtSel = document.getElementById('fTarget');
+      const fltSel = document.getElementById('assetFilter');
       const prevSrc = srcSel.value;
       const prevTgt = tgtSel.value;
+      const prevFlt = fltSel.value;
+
       const optionsHtml = state.assets
         .map(a => `<option value="${a.id}">${escapeHtml(a.name)} (${a.currency})</option>`)
         .join('');
       srcSel.innerHTML = optionsHtml;
       tgtSel.innerHTML = optionsHtml;
+
+      fltSel.innerHTML = `<option value="ALL">Semua Akun Aset</option>` + optionsHtml;
+      if (prevFlt && (prevFlt === 'ALL' || state.assets.some(a => a.id === prevFlt))) {
+        fltSel.value = prevFlt;
+      }
+
       if (prevSrc && state.assets.some(a => a.id === prevSrc)) srcSel.value = prevSrc;
       if (prevTgt && state.assets.some(a => a.id === prevTgt)) tgtSel.value = prevTgt;
       else if (state.assets.length > 1) tgtSel.value = state.assets[1].id;
@@ -1107,31 +1286,65 @@
       }
     }
 
-    function addOrUpdateStock(itemName, category, date, currency, unitAmount) {
+    function addOrUpdateStock(itemName, category, date, currency, unitAmount, qty = 1, minStock = 1) {
       const existing = state.groceries.find(g => g.name.toLowerCase() === itemName.toLowerCase());
       if (existing) {
-        existing.stock = (Number(existing.stock) || 1) + 1;
+        existing.stock = (Number(existing.stock) || 0) + (Number(qty) || 1);
+        if (minStock !== undefined) existing.minStock = Number(minStock);
         existing.date = date;
         existing.category = category;
-        existing.amount = unitAmount;
-        existing.currency = currency;
+        if (unitAmount !== undefined) existing.amount = unitAmount;
+        if (currency) existing.currency = currency;
       } else {
         state.groceries.unshift({
           id: 'ITM-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
           name: itemName,
-          stock: 1,
+          stock: Number(qty) || 1,
+          minStock: Number(minStock) ?? 1,
           category,
           date,
-          currency,
-          amount: unitAmount
+          currency: currency || state.displayCurrency,
+          amount: unitAmount || 0
         });
       }
+    }
+
+    function handleDirectStockSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('sName').value.trim();
+      const qty = Math.max(0, Number(document.getElementById('sQty').value) || 0);
+      const minStock = Math.max(0, Number(document.getElementById('sMin').value) || 0);
+      if (!name) return;
+
+      const existing = state.groceries.find(g => g.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
+        existing.stock = (Number(existing.stock) || 0) + qty;
+        existing.minStock = minStock;
+        existing.date = todayISO();
+      } else {
+        state.groceries.unshift({
+          id: 'ITM-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+          name,
+          stock: qty,
+          minStock,
+          category: 'Stok Rumah',
+          date: todayISO(),
+          currency: state.displayCurrency,
+          amount: 0
+        });
+      }
+
+      document.getElementById('sName').value = '';
+      document.getElementById('sQty').value = '1';
+      saveState();
+      renderAll();
+      showToast('Stok barang disimpan ke logbook');
     }
 
     function adjustStock(id, delta) {
       const item = state.groceries.find(g => g.id === id);
       if (!item) return;
-      item.stock = Math.max(0, (Number(item.stock) || 1) + delta);
+      item.stock = Math.max(0, (Number(item.stock) || 0) + delta);
       saveState();
       renderAll();
     }
@@ -1145,9 +1358,15 @@
       const targetAssetId = document.getElementById('fTarget').value;
       const currency = document.getElementById('fCurr').value;
       const amount = Number(document.getElementById('fAmount').value);
+      const installments = type === 'Liability'
+        ? Math.max(1, Math.min(60, Number(document.getElementById('fInstallments').value) || 1))
+        : 1;
       const targetAmountRaw = document.getElementById('fTargetAmount').value;
       const targetAmount = targetAmountRaw ? Number(targetAmountRaw) : null;
       const date = document.getElementById('fDate').value || todayISO();
+      const firstDueDate = type === 'Liability'
+        ? (document.getElementById('fDueDate').value || nextMonthOffsetISO(date, 1))
+        : '';
       const note = document.getElementById('fNote').value.trim();
       const rawItems = document.getElementById('fItems').value.trim();
 
@@ -1167,28 +1386,58 @@
           const updated = {
             ...state.transactions[idx],
             type, category, sourceAssetId, targetAssetId,
-            currency, amount, targetAmount, date, note
+            currency, amount, targetAmount, date,
+            dueDate: type === 'Liability' ? firstDueDate : '',
+            note
           };
           applyTransactionEffect(updated, 1);
           state.transactions[idx] = updated;
         }
         showToast('Transaksi diperbarui');
+      } else if (type === 'Liability' && installments > 1) {
+        const groupId = 'INST-' + Date.now();
+        for (let i = 0; i < installments; i++) {
+          const stepDue = nextMonthOffsetISO(firstDueDate, i);
+          const tx = {
+            id: `TX-${Date.now()}-${i + 1}`,
+            groupId,
+            type: 'Liability',
+            category,
+            sourceAssetId,
+            targetAssetId: '',
+            currency,
+            amount,
+            targetAmount: null,
+            date,
+            dueDate: stepDue,
+            status: 'Pending',
+            note: `${note ? note + ' · ' : ''}Cicilan ${i + 1}/${installments}`
+          };
+          state.transactions.unshift(tx);
+        }
+        showToast(`${installments} jadwal auto-debit bulanan dibuat`);
       } else {
         const tx = {
           id: 'TX-' + Date.now(),
           type, category, sourceAssetId, targetAssetId,
-          currency, amount, targetAmount, date, note
+          currency, amount, targetAmount, date,
+          dueDate: firstDueDate,
+          status: type === 'Liability' ? 'Pending' : 'Completed',
+          note
         };
         applyTransactionEffect(tx, 1);
         state.transactions.unshift(tx);
 
         if (type === 'Expense' && rawItems) {
           const items = rawItems.split(',').map(s => s.trim()).filter(Boolean);
-          items.forEach(itemName => addOrUpdateStock(itemName, category, date, currency, amount / items.length));
+          items.forEach(itemName => addOrUpdateStock(itemName, category, date, currency, amount / items.length, 1, 1));
         }
-        showToast('Transaksi & stok tersimpan');
+        showToast(type === 'Liability'
+          ? `Hutang dicatat (auto-debit pelunasan ${firstDueDate})`
+          : 'Transaksi & stok tersimpan');
       }
 
+      processDueAutoDebits(true);
       clearReceiptPhoto();
       saveState();
       resetForm();
@@ -1208,6 +1457,7 @@
       document.getElementById('fAmount').value = tx.amount;
       document.getElementById('fTargetAmount').value = tx.targetAmount || '';
       document.getElementById('fDate').value = tx.date;
+      document.getElementById('fDueDate').value = tx.dueDate || '';
       document.getElementById('fNote').value = tx.note || '';
       document.getElementById('cancelEditBtn').classList.remove('hidden');
       document.getElementById('submitBtn').textContent = 'Update Transaksi';
@@ -1341,13 +1591,8 @@
         const data = await res.json();
         const payload = data.payload || data;
         if (Array.isArray(payload.assets) && Array.isArray(payload.transactions)) {
-          state = {
-            ...structuredClone(DEFAULT_STATE),
-            ...payload,
-            syncUrl: url,
-            ratesToIDR: { ...DEFAULT_STATE.ratesToIDR, ...(payload.ratesToIDR || {}) },
-            rateMeta: { ...DEFAULT_STATE.rateMeta, ...(payload.rateMeta || {}) }
-          };
+          state = normalizeImportedState(payload, url);
+          processDueAutoDebits(true);
           saveState();
           renderAll();
           showToast('Data berhasil di-download dari awan');
@@ -1361,6 +1606,7 @@
 
     function resetFilters() {
       document.getElementById('searchInput').value = '';
+      document.getElementById('assetFilter').value = 'ALL';
       document.getElementById('typeFilter').value = 'ALL';
       document.getElementById('currFilter').value = 'ALL';
       document.getElementById('dateFrom').value = '';
@@ -1401,12 +1647,8 @@
             showToast('Format file backup tidak valid');
             return;
           }
-          state = {
-            ...structuredClone(DEFAULT_STATE),
-            ...data,
-            ratesToIDR: { ...DEFAULT_STATE.ratesToIDR, ...(data.ratesToIDR || {}) },
-            rateMeta: { ...DEFAULT_STATE.rateMeta, ...(data.rateMeta || {}) }
-          };
+          state = normalizeImportedState(data, state.syncUrl);
+          processDueAutoDebits(true);
           saveState();
           renderAll();
           showToast('Backup berhasil dipulihkan');
@@ -1419,9 +1661,9 @@
     }
 
     function exportReportCSV() {
-      const headers = ['ID', 'Tanggal', 'Tipe', 'Kategori', 'Mata_Uang', 'Nominal', 'Catatan'];
+      const headers = ['ID', 'Tanggal_Cetak', 'Tanggal_Pelunasan', 'Status', 'Tipe', 'Kategori', 'Mata_Uang', 'Nominal', 'Catatan'];
       const rows = state.transactions.map(t => [
-        t.id, t.date, t.type, t.category, t.currency, t.amount, (t.note || '').replace(/,/g, ';')
+        t.id, t.date, t.dueDate || '', t.status || 'Completed', t.type, t.category, t.currency, t.amount, (t.note || '').replace(/,/g, ';')
       ]);
       const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1457,6 +1699,7 @@
 
       const totalPortfolio = state.assets.reduce((sum, a) => sum + convertCurrency(a.balance, a.currency, disp), 0);
       const monthPrefix = currentMonthPrefix();
+      const nextMonthPrefix = nextCalendarMonthPrefix();
       const today = todayISO();
 
       const monthExpenses = state.transactions.filter(t => t.type === 'Expense' && (t.date || '').startsWith(monthPrefix));
@@ -1464,14 +1707,18 @@
       const todayExpense = state.transactions
         .filter(t => t.type === 'Expense' && t.date === today)
         .reduce((sum, t) => sum + convertCurrency(t.amount, t.currency, disp), 0);
-      const totalDebt = state.transactions
-        .filter(t => t.type === 'Liability')
+
+      const pendingLiabilities = state.transactions.filter(t => t.type === 'Liability' && t.status !== 'Paid');
+      const totalDebt = pendingLiabilities.reduce((sum, t) => sum + convertCurrency(t.amount, t.currency, disp), 0);
+      const nextMonthDue = pendingLiabilities
+        .filter(t => (t.dueDate || '').startsWith(nextMonthPrefix))
         .reduce((sum, t) => sum + convertCurrency(t.amount, t.currency, disp), 0);
 
       document.getElementById('portfolioTotal').textContent = formatMoney(totalPortfolio, disp);
       document.getElementById('statMonth').textContent = formatMoney(monthExpense, disp);
       document.getElementById('statToday').textContent = formatMoney(todayExpense, disp);
       document.getElementById('statDebt').textContent = formatMoney(totalDebt, disp);
+      document.getElementById('statNextMonthDue').textContent = formatMoney(nextMonthDue, disp);
 
       const chartEl = document.getElementById('categoryChart');
       if (monthExpenses.length > 0) {
@@ -1535,7 +1782,8 @@
               <div class="asset-right">
                 <div class="asset-main">${formatMoney(a.balance, a.currency)}</div>
                 <div class="asset-sub">${a.currency !== disp ? '≈ ' + formatMoney(converted, disp) : '&nbsp;'}</div>
-                <div style="margin-top:4px;">
+                <div style="margin-top:4px;display:flex;gap:6px;justify-content:flex-end;">
+                  <button type="button" class="icon-btn" onclick="filterByAsset('${a.id}')">Mutasi</button>
                   <button type="button" class="icon-btn" style="color:#fda4af;" onclick="deleteAsset('${a.id}')">Hapus</button>
                 </div>
               </div>
@@ -1545,19 +1793,22 @@
       }
 
       const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      const assetF = document.getElementById('assetFilter').value;
       const typeF = document.getElementById('typeFilter').value;
       const currF = document.getElementById('currFilter').value;
       const fromD = document.getElementById('dateFrom').value;
       const toD = document.getElementById('dateTo').value;
 
       const filteredTx = state.transactions.filter(t => {
+        if (assetF !== 'ALL' && t.sourceAssetId !== assetF && t.targetAssetId !== assetF) return false;
         if (typeF !== 'ALL' && t.type !== typeF) return false;
         if (currF !== 'ALL' && t.currency !== currF) return false;
         if (fromD && t.date < fromD) return false;
         if (toD && t.date > toD) return false;
         if (q) {
           const srcName = (state.assets.find(a => a.id === t.sourceAssetId)?.name || '').toLowerCase();
-          const hay = `${t.category} ${t.note || ''} ${t.type} ${srcName}`.toLowerCase();
+          const tgtName = (state.assets.find(a => a.id === t.targetAssetId)?.name || '').toLowerCase();
+          const hay = `${t.category} ${t.note || ''} ${t.type} ${srcName} ${tgtName} ${t.dueDate || ''}`.toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;
@@ -1570,6 +1821,14 @@
         txListEl.innerHTML = filteredTx.map(t => {
           const tagClass = `tag-${t.type.toLowerCase()}`;
           const srcName = state.assets.find(a => a.id === t.sourceAssetId)?.name || '-';
+          const tgtName = state.assets.find(a => a.id === t.targetAssetId)?.name;
+          const accLabel = t.type === 'Transfer' && tgtName ? `${srcName} → ${tgtName}` : srcName;
+          const isPendingLiability = t.type === 'Liability' && t.status !== 'Paid';
+          const isPaidLiability = t.type === 'Liability' && t.status === 'Paid';
+          const dueInfo = t.type === 'Liability'
+            ? ` · Pelunasan: ${t.dueDate || '-'} (${isPaidLiability ? 'Lunas/Terdebit' : 'Menunggu Auto-Debit'})`
+            : '';
+
           return `
             <div class="tx-item">
               <div>
@@ -1577,11 +1836,13 @@
                   ${escapeHtml(t.category)}
                   <span class="tag ${tagClass}">${t.type}</span>
                 </div>
-                <div class="asset-meta">${t.date} · ${escapeHtml(srcName)}${t.note ? ' · ' + escapeHtml(t.note) : ''}</div>
+                <div class="asset-meta">Cetak: ${t.date} · ${escapeHtml(accLabel)}${dueInfo}${t.note ? ' · ' + escapeHtml(t.note) : ''}</div>
               </div>
               <div class="asset-right">
                 <div class="asset-main">${formatMoney(t.amount, t.currency)}</div>
-                <div style="margin-top:4px;display:flex;gap:6px;justify-content:flex-end;">
+                <div style="margin-top:4px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+                  ${isPendingLiability ? `<button type="button" class="icon-btn btn-green" onclick="settleLiabilityItem(state.transactions.find(x=>x.id==='${t.id}'))">Lunasi</button>` : ''}
+                  ${isPaidLiability ? `<button type="button" class="icon-btn" onclick="revertLiabilitySettlement('${t.id}')">Batalkan</button>` : ''}
                   <button type="button" class="icon-btn" onclick="editTransaction('${t.id}')">Edit</button>
                   <button type="button" class="icon-btn" style="color:#fda4af;" onclick="deleteTransaction('${t.id}')">Hapus</button>
                 </div>
@@ -1592,31 +1853,58 @@
       }
 
       const grocEl = document.getElementById('groceryList');
-      document.getElementById('itemCountBadge').textContent = `${state.groceries.length} item`;
-      if (!state.groceries.length) {
-        grocEl.innerHTML = `<div class="asset-meta">Belum ada item stok/belanjaan tercatat.</div>`;
+      const sq = (document.getElementById('stockSearch')?.value || '').toLowerCase().trim();
+      const sf = document.getElementById('stockStatusFilter')?.value || 'ALL';
+
+      const filteredGroceries = state.groceries.filter(g => {
+        const stockNum = Number(g.stock) || 0;
+        const minNum = Number(g.minStock) ?? 1;
+        if (sf === 'EMPTY' && stockNum > 0) return false;
+        if (sf === 'LOW' && stockNum > minNum) return false;
+        if (sq && !`${g.name} ${g.category || ''}`.toLowerCase().includes(sq)) return false;
+        return true;
+      });
+
+      document.getElementById('itemCountBadge').textContent = `${filteredGroceries.length} / ${state.groceries.length} item`;
+      if (!filteredGroceries.length) {
+        grocEl.innerHTML = `<div class="asset-meta">Belum ada item stok/belanjaan yang cocok.</div>`;
       } else {
-        grocEl.innerHTML = state.groceries.slice(0, 30).map(g => `
-          <div class="tx-item">
-            <div>
-              <div class="asset-name">${escapeHtml(g.name)} · Stok: ${Number(g.stock) || 1}</div>
-              <div class="asset-meta">${g.date} · ${escapeHtml(g.category)}</div>
-            </div>
-            <div class="asset-right">
-              <div class="asset-main">${formatMoney(g.amount, g.currency)}</div>
-              <div style="margin-top:4px;display:flex;gap:4px;justify-content:flex-end;">
-                <button type="button" class="icon-btn" onclick="adjustStock('${g.id}', -1)">-1</button>
-                <button type="button" class="icon-btn" onclick="adjustStock('${g.id}', 1)">+1</button>
+        grocEl.innerHTML = filteredGroceries.slice(0, 40).map(g => {
+          const stockNum = Number(g.stock) || 0;
+          const minNum = Number(g.minStock) ?? 1;
+          const badge = stockNum === 0
+            ? `<span class="tag tag-empty">Habis</span>`
+            : (stockNum <= minNum ? `<span class="tag tag-low">Menipis</span>` : '');
+
+          return `
+            <div class="tx-item">
+              <div>
+                <div class="asset-name">${escapeHtml(g.name)} · Stok: ${stockNum}${badge}</div>
+                <div class="asset-meta">${g.date} · ${escapeHtml(g.category)} · Min: ${minNum}</div>
+              </div>
+              <div class="asset-right">
+                <div class="asset-main">${g.amount ? formatMoney(g.amount, g.currency) : 'Log Stok'}</div>
+                <div style="margin-top:4px;display:flex;gap:4px;justify-content:flex-end;">
+                  <button type="button" class="icon-btn" onclick="adjustStock('${g.id}', -1)">-1</button>
+                  <button type="button" class="icon-btn" onclick="adjustStock('${g.id}', 1)">+1</button>
+                </div>
               </div>
             </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
       }
 
       populateAssetSelects();
     }
 
+    function filterByAsset(assetId) {
+      document.getElementById('assetFilter').value = assetId;
+      renderAll();
+      document.getElementById('txList').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     document.getElementById('fDate').value = todayISO();
+    processDueAutoDebits(true);
     renderAll();
     fetchOnlineRates(false);
   </script>
