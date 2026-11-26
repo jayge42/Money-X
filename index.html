@@ -54,6 +54,7 @@
     }
     .brand-title { font-weight: 700; font-size: 16px; line-height: 1.1; }
     .brand-sub { font-size: 11px; color: var(--muted); }
+    .rate-mode { font-size: 10px; color: #60a5fa; margin-top: 2px; }
 
     .top-actions { display: flex; gap: 6px; }
     .icon-btn {
@@ -265,6 +266,16 @@
       z-index: 60;
       box-shadow: 0 10px 25px rgba(0,0,0,0.45);
     }
+
+    @media print {
+      body { background: #fff !important; color: #111 !important; padding-bottom: 0 !important; }
+      .top-actions, .bottom-nav, .quick-row, .filters, .icon-btn, #ratesModal, #toast { display: none !important; }
+      .topbar { position: static; background: #fff !important; border-bottom: 2px solid #ddd; }
+      .card { background: #fff !important; border: 1px solid #ccc !important; break-inside: avoid; }
+      .stat-box { background: #f8fafc !important; border: 1px solid #ddd !important; }
+      .label-muted, .asset-meta, .asset-sub, .stat-label, .brand-sub { color: #555 !important; }
+      .portfolio-amount, .asset-name, .asset-main, .brand-title { color: #000 !important; }
+    }
   </style>
 </head>
 <body>
@@ -273,7 +284,8 @@
       <div class="brand-badge">MX</div>
       <div>
         <div class="brand-title">Money-X</div>
-        <div class="brand-sub" id="rateSummary">1 USD = 16,000 IDR · 1 JPY = 105 IDR</div>
+        <div class="brand-sub" id="rateSummary">1 USD = 18.000 IDR · 1 JPY = 114 IDR</div>
+        <div class="rate-mode" id="rateStatus">Kurs: Cadangan Offline</div>
       </div>
     </div>
     <div class="top-actions">
@@ -369,17 +381,17 @@
         <button class="menu-tile" onclick="exportReportPrintable()">
           <span class="menu-icon">🖨️</span>
           <div class="menu-title">Cetak / Simpan PDF</div>
-          <div class="menu-desc">Buka tampilan cetak ringkasan bulanan</div>
+          <div class="menu-desc">Cetak ringkasan aset & riwayat transaksi</div>
         </button>
         <button class="menu-tile" onclick="openRatesModal()">
           <span class="menu-icon">💱</span>
           <div class="menu-title">Pengaturan Kurs</div>
-          <div class="menu-desc">Atur nilai tukar IDR, JPY, dan USD</div>
+          <div class="menu-desc">Sync kurs online atau edit manual offline</div>
         </button>
         <button class="menu-tile" onclick="resetDemoData()">
           <span class="menu-icon">🔄</span>
           <div class="menu-title">Reset Data Awal</div>
-          <div class="menu-desc">Kembalikan akun & kurs bawaan awal</div>
+          <div class="menu-desc">Kembalikan akun & saldo bawaan awal</div>
         </button>
       </div>
 
@@ -423,7 +435,7 @@
       <div class="card" id="formCard">
         <div class="section-title">
           <span id="formTitle">Form Input Expense</span>
-          <button class="icon-btn" id="cancelEditBtn" class="hidden" onclick="resetForm()">Batal</button>
+          <button class="icon-btn hidden" id="cancelEditBtn" onclick="resetForm()">Batal</button>
         </div>
 
         <form onsubmit="handleFormSubmit(event)">
@@ -468,7 +480,7 @@
             <input type="number" step="any" id="fAmount" placeholder="0" required />
           </div>
 
-          <div class="form-group" id="groupTargetAmount" class="hidden">
+          <div class="form-group hidden" id="groupTargetAmount">
             <label for="fTargetAmount">Nominal Diterima di Akun Tujuan (kosongkan untuk konversi otomatis)</label>
             <input type="number" step="any" id="fTargetAmount" placeholder="Otomatis sesuai kurs" />
           </div>
@@ -499,7 +511,7 @@
         <form onsubmit="handleAssetSubmit(event)">
           <div class="form-group">
             <label for="aName">Nama Aset</label>
-            <input type="text" id="aName" placeholder="Contoh: BLU BCA, PayPay / Cash JPY, BIBIT" required />
+            <input type="text" id="aName" placeholder="Contoh: BLU BCA, Gaji, BIBIT" required />
           </div>
           <div class="form-group">
             <label for="aCurr">Mata Uang Aset</label>
@@ -523,9 +535,12 @@
   <div id="ratesModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;">
     <div class="card" style="width:100%;max-width:420px;margin:0;">
       <div class="section-title">
-        <span>Pengaturan Kurs ke IDR</span>
+        <span>Pengaturan Kurs (Online & Offline)</span>
         <button class="icon-btn" onclick="closeRatesModal()">✕</button>
       </div>
+      <p class="asset-meta" id="modalRateInfo" style="margin-top:0;margin-bottom:12px;">
+        Saat online, kurs diperbarui otomatis. Saat offline atau ingin pakai kurs sendiri, ubah angka di bawah lalu simpan manual.
+      </p>
       <div class="form-group">
         <label for="rUsd">1 USD = berapa IDR</label>
         <input type="number" step="any" id="rUsd" />
@@ -534,7 +549,10 @@
         <label for="rJpy">1 JPY = berapa IDR</label>
         <input type="number" step="any" id="rJpy" />
       </div>
-      <button class="btn" onclick="saveRates()">Simpan Kurs</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button type="button" class="btn btn-secondary" onclick="fetchOnlineRates(true)">↻ Update Online</button>
+        <button type="button" class="btn" onclick="saveManualRates()">Simpan Manual</button>
+      </div>
     </div>
   </div>
 
@@ -555,19 +573,21 @@
   </nav>
 
   <script>
-    const STORAGE_KEY = 'money_x_pro_state_v1';
+    const STORAGE_KEY = 'money_x_pro_state_v2';
     const CURRENCIES = ['IDR', 'JPY', 'USD'];
 
     const DEFAULT_STATE = {
       displayCurrency: 'IDR',
-      ratesToIDR: { IDR: 1, JPY: 105, USD: 16000 },
+      ratesToIDR: { IDR: 1, JPY: 114, USD: 18000 },
+      rateMeta: { mode: 'auto', updatedAt: null },
       assets: [
-        { id: 'AST-001', name: 'BIBIT', currency: 'IDR', balance: 8769000 },
+        { id: 'AST-001', name: 'BIBIT', currency: 'IDR', balance: 9400000 },
         { id: 'AST-002', name: 'DARURAT', currency: 'IDR', balance: 0 },
-        { id: 'AST-003', name: 'GOLD', currency: 'IDR', balance: 870000 },
-        { id: 'AST-004', name: 'BLU BCA', currency: 'IDR', balance: 24981702 },
-        { id: 'AST-005', name: 'PayPay / Cash JPY', currency: 'JPY', balance: 225150 },
-        { id: 'AST-006', name: 'Wise USD', currency: 'USD', balance: 150 }
+        { id: 'AST-003', name: 'GOLD', currency: 'IDR', balance: 0 },
+        { id: 'AST-004', name: 'BLU BCA', currency: 'IDR', balance: 0 },
+        { id: 'AST-005', name: 'PayPay / Cash JPY', currency: 'IDR', balance: 0 },
+        { id: 'AST-006', name: 'Wise USD', currency: 'IDR', balance: 0 },
+        { id: 'AST-007', name: 'Gaji', currency: 'JPY', balance: 227000 }
       ],
       transactions: [],
       groceries: []
@@ -583,7 +603,8 @@
         return {
           ...structuredClone(DEFAULT_STATE),
           ...parsed,
-          ratesToIDR: { ...DEFAULT_STATE.ratesToIDR, ...(parsed.ratesToIDR || {}) }
+          ratesToIDR: { ...DEFAULT_STATE.ratesToIDR, ...(parsed.ratesToIDR || {}) },
+          rateMeta: { ...DEFAULT_STATE.rateMeta, ...(parsed.rateMeta || {}) }
         };
       } catch {
         return structuredClone(DEFAULT_STATE);
@@ -599,7 +620,54 @@
       el.textContent = msg;
       el.classList.remove('hidden');
       clearTimeout(window.__toastTimer);
-      window.__toastTimer = setTimeout(() => el.classList.add('hidden'), 2400);
+      window.__toastTimer = setTimeout(() => el.classList.add('hidden'), 2500);
+    }
+
+    async function fetchOnlineRates(forceUserAction = false) {
+      if (!forceUserAction && state.rateMeta && state.rateMeta.mode === 'manual') {
+        renderAll();
+        return;
+      }
+
+      if (!navigator.onLine) {
+        if (forceUserAction) showToast('Sedang offline — memakai kurs tersimpan');
+        renderAll();
+        return;
+      }
+
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 6000);
+        const res = await fetch('https://open.er-api.com/v6/latest/IDR', { signal: controller.signal });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        if (data && data.rates && data.rates.USD && data.rates.JPY) {
+          const usdToIdr = Math.round(1 / data.rates.USD);
+          const jpyToIdr = Number((1 / data.rates.JPY).toFixed(2));
+          if (usdToIdr > 0 && jpyToIdr > 0) {
+            state.ratesToIDR.USD = usdToIdr;
+            state.ratesToIDR.JPY = jpyToIdr;
+            state.rateMeta = {
+              mode: 'auto',
+              updatedAt: new Date().toLocaleString('id-ID', {
+                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+              })
+            };
+            saveState();
+            if (!document.getElementById('ratesModal').classList.contains('hidden')) {
+              document.getElementById('rUsd').value = state.ratesToIDR.USD;
+              document.getElementById('rJpy').value = state.ratesToIDR.JPY;
+            }
+            renderAll();
+            if (forceUserAction) showToast('Kurs online berhasil diperbarui');
+          }
+        }
+      } catch {
+        if (forceUserAction) showToast('Gagal ambil kurs online, memakai kurs offline');
+        renderAll();
+      }
     }
 
     function convertCurrency(amount, fromCurr, toCurr) {
@@ -877,15 +945,21 @@
       document.getElementById('ratesModal').classList.add('hidden');
     }
 
-    function saveRates() {
+    function saveManualRates() {
       const usd = Number(document.getElementById('rUsd').value);
       const jpy = Number(document.getElementById('rJpy').value);
       if (usd > 0) state.ratesToIDR.USD = usd;
       if (jpy > 0) state.ratesToIDR.JPY = jpy;
+      state.rateMeta = {
+        mode: 'manual',
+        updatedAt: new Date().toLocaleString('id-ID', {
+          day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+        })
+      };
       saveState();
       closeRatesModal();
       renderAll();
-      showToast('Kurs diperbarui');
+      showToast('Kurs manual disimpan');
     }
 
     function resetFilters() {
@@ -898,9 +972,10 @@
     }
 
     function resetDemoData() {
-      if (!confirm('Reset aset dan kurs ke bawaan awal?')) return;
+      if (!confirm('Reset aset dan saldo ke bawaan awal sesuai screenshot?')) return;
       state = structuredClone(DEFAULT_STATE);
       saveState();
+      fetchOnlineRates(false);
       renderAll();
       showToast('Data awal dipulihkan');
     }
@@ -930,7 +1005,8 @@
           state = {
             ...structuredClone(DEFAULT_STATE),
             ...data,
-            ratesToIDR: { ...DEFAULT_STATE.ratesToIDR, ...(data.ratesToIDR || {}) }
+            ratesToIDR: { ...DEFAULT_STATE.ratesToIDR, ...(data.ratesToIDR || {}) },
+            rateMeta: { ...DEFAULT_STATE.rateMeta, ...(data.rateMeta || {}) }
           };
           saveState();
           renderAll();
@@ -960,7 +1036,8 @@
     }
 
     function exportReportPrintable() {
-      window.print();
+      switchTab('dashboard');
+      setTimeout(() => window.print(), 150);
     }
 
     function escapeHtml(str) {
@@ -974,6 +1051,10 @@
       document.getElementById('activeCurrBadge').textContent = disp;
       document.getElementById('rateSummary').textContent =
         `1 USD = ${Number(state.ratesToIDR.USD).toLocaleString('id-ID')} IDR · 1 JPY = ${Number(state.ratesToIDR.JPY).toLocaleString('id-ID')} IDR`;
+
+      const modeLabel = state.rateMeta?.mode === 'manual' ? 'Manual (Offline)' : 'Otomatis Online';
+      const timeLabel = state.rateMeta?.updatedAt ? ` · ${state.rateMeta.updatedAt}` : '';
+      document.getElementById('rateStatus').textContent = `Kurs: ${modeLabel}${timeLabel}`;
 
       const totalPortfolio = state.assets.reduce((sum, a) => {
         return sum + convertCurrency(a.balance, a.currency, disp);
@@ -1088,6 +1169,7 @@
 
     document.getElementById('fDate').value = todayISO();
     renderAll();
+    fetchOnlineRates(false);
   </script>
 </body>
 </html>
