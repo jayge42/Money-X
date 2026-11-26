@@ -207,6 +207,21 @@
       border-color: color-mix(in srgb, var(--accent) 40%, transparent);
     }
 
+    .smart-suggest-bar {
+      background: var(--accent-soft);
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+      border-radius: 12px;
+      padding: 9px 11px;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+    .smart-suggest-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
     .budget-block { margin-bottom: 12px; }
     .budget-block:last-child { margin-bottom: 0; }
     .budget-meta {
@@ -484,7 +499,7 @@
 
     @media print {
       body { background: #fff !important; color: #111 !important; padding-bottom: 0 !important; }
-      .top-actions, .bottom-nav, .quick-row, .filters, .icon-btn, .modal-backdrop, #toast, .quick-chips { display: none !important; }
+      .top-actions, .bottom-nav, .quick-row, .filters, .icon-btn, .modal-backdrop, #toast, .quick-chips, .smart-suggest-bar { display: none !important; }
       .topbar { position: static; background: #fff !important; border-bottom: 2px solid #ddd; }
       .card { background: #fff !important; border: 1px solid #ccc !important; break-inside: avoid; }
       .stat-box, .month-compare { background: #f8fafc !important; border: 1px solid #ddd !important; }
@@ -718,8 +733,9 @@
         <form onsubmit="handleDirectStockSubmit(event)" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">
           <div class="form-group" style="margin-bottom:8px;">
             <label for="sName">Tambah / Restok Barang Rumah Langsung</label>
-            <input type="text" id="sName" placeholder="Contoh: Blendy - Instant Coffee Latte - Seicomart Sapporo" required />
+            <input type="text" id="sName" placeholder="Contoh: Blendy - Instant Coffee Latte - Seicomart Sapporo" oninput="updateStockNameSuggestions()" required />
           </div>
+          <div id="directStockSuggestBar" class="quick-chips hidden"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
             <div>
               <label for="sQty">Jumlah Stok</label>
@@ -784,6 +800,9 @@
           <button type="button" class="chip-btn" onclick="applyQuickPreset('Utilitas & Tagihan', 5000)">+ Tagihan (5.000)</button>
         </div>
 
+        <!-- PANEL SARAN CERDAS OTOMATIS -->
+        <div id="smartSuggestPanel" class="smart-suggest-bar hidden"></div>
+
         <form onsubmit="handleFormSubmit(event)">
           <input type="hidden" id="editId" />
 
@@ -826,7 +845,7 @@
 
           <div class="form-group" id="groupCategory">
             <label for="fCategory">Kategori</label>
-            <input type="text" id="fCategory" placeholder="Contoh: Makanan, Belanja Bulanan, Kartu Kredit" required />
+            <input type="text" id="fCategory" placeholder="Contoh: Makanan, Belanja Bulanan, Kartu Kredit" oninput="handleCategoryTyped()" required />
           </div>
 
           <div class="form-group" id="groupSource">
@@ -875,12 +894,12 @@
 
           <div class="form-group">
             <label for="fNote">Catatan / Rincian</label>
-            <input type="text" id="fNote" placeholder="Keterangan singkat transaksi" />
+            <input type="text" id="fNote" placeholder="Keterangan singkat transaksi" oninput="runSmartSuggestFromInputs(false)" />
           </div>
 
           <div class="form-group" id="groupItems">
             <label for="fItems">Item Stok / Belanjaan (Brand - Product Type - Store)</label>
-            <textarea id="fItems" placeholder="Contoh: Blendy - Instant Coffee Latte - Seicomart Sapporo"></textarea>
+            <textarea id="fItems" placeholder="Contoh: Blendy - Instant Coffee Latte - Seicomart Sapporo" oninput="runSmartSuggestFromInputs(false)"></textarea>
           </div>
 
           <button type="submit" class="btn" id="submitBtn">Simpan Transaksi</button>
@@ -1086,7 +1105,7 @@
   </nav>
 
   <script>
-    const STORAGE_KEY = 'money_x_pro_state_v11';
+    const STORAGE_KEY = 'money_x_pro_state_v12';
     const CURRENCIES = ['IDR', 'JPY', 'USD'];
 
     const THEME_PRESETS = {
@@ -1196,6 +1215,16 @@
       groceries: []
     };
 
+    const KEYWORD_CATEGORY_RULES = [
+      { re: /gaji|salary|bonus|upah|lembur|payroll|給与|給料/i, category: 'Gaji / Pemasukan', type: 'Income' },
+      { re: /cicilan|hutang|kredit|auto-?debit|paylater|pinjaman|installment/i, category: 'Auto-Debit Tagihan', type: 'Liability' },
+      { re: /makan|nasi|bento|ramen|lunch|dinner|sarapan|beras|telur|ayam|daging|sayur|roti|mie|ご飯|弁当|ラーメン|野菜|肉|卵/i, category: 'Makanan', type: 'Expense' },
+      { re: /kopi|coffee|latte|teh|tea|minum|air mineral|susu|milk|珈琲|コーヒー|ラテ|お茶|水/i, category: 'Kopi & Minuman', type: 'Expense' },
+      { re: /kereta|bus|train|subway|icoca|suica|pasmo|transport|bensin|parkir|tiket|電車|バス|交通/i, category: 'Transportasi', type: 'Expense' },
+      { re: /listrik|air|gas|internet|wifi|pulsa|kuota|tagihan|sewa|rent|電気|水道|ガス|通信/i, category: 'Utilitas & Tagihan', type: 'Expense' },
+      { re: /sabun|detergen|tisu|shampoo|daiso|aeon|seicomart|lawson|familymart|7-eleven|belanja|stok/i, category: 'Belanja Bulanan', type: 'Expense' }
+    ];
+
     const OFFLINE_EN_DICT = {
       '米': 'Rice', 'ごはん': 'Cooked Rice', '卵': 'Eggs', 'たまご': 'Eggs',
       '鶏肉': 'Chicken', '鶏': 'Chicken', '牛肉': 'Beef', '牛': 'Beef',
@@ -1228,6 +1257,228 @@
     let parsedFormattedItems = [];
     let parsedOcrAmount = null;
     let quickParseDraft = null;
+    let categoryManuallyEdited = false;
+
+    // --- SMART CATEGORY SUGGEST & OTOMASI CERDAS ---
+    function tokenizeText(str) {
+      return String(str || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\u3040-\u30ff\u4e00-\u9faf]+/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length >= 2);
+    }
+
+    function inferSmartSuggestion(rawText, currentCategory = '') {
+      const tokens = tokenizeText(rawText);
+      const combined = `${rawText || ''} ${currentCategory || ''}`.trim();
+      const catScores = {};
+      const typeScores = {};
+
+      // 1. Skor dari riwayat transaksi pengguna
+      if (tokens.length > 0) {
+        state.transactions.forEach(tx => {
+          const hay = `${tx.category || ''} ${tx.note || ''}`.toLowerCase();
+          let hits = 0;
+          tokens.forEach(tok => {
+            if (hay.includes(tok)) hits++;
+          });
+          if (hits > 0 && tx.category) {
+            catScores[tx.category] = (catScores[tx.category] || 0) + hits * 3;
+            if (tx.type) typeScores[tx.type] = (typeScores[tx.type] || 0) + hits * 2;
+          }
+        });
+      }
+
+      // 2. Skor dari aturan kata kunci ID / JP / EN
+      KEYWORD_CATEGORY_RULES.forEach(rule => {
+        if (rule.re.test(combined)) {
+          catScores[rule.category] = (catScores[rule.category] || 0) + 4;
+          typeScores[rule.type] = (typeScores[rule.type] || 0) + 3;
+        }
+      });
+
+      const topCategories = Object.entries(catScores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([cat]) => cat);
+
+      const bestCategory = (currentCategory && currentCategory.trim())
+        ? currentCategory.trim()
+        : (topCategories[0] || '');
+
+      const bestType = Object.entries(typeScores).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+
+      // 3. Saran Akun Sumber & Mata Uang paling sering dipakai pada kategori tersebut
+      let suggestedAssetId = '';
+      let suggestedCurrency = '';
+      if (bestCategory) {
+        const assetFreq = {};
+        const currFreq = {};
+        state.transactions.forEach(tx => {
+          if ((tx.category || '').toLowerCase() === bestCategory.toLowerCase()) {
+            if (tx.sourceAssetId) assetFreq[tx.sourceAssetId] = (assetFreq[tx.sourceAssetId] || 0) + 1;
+            if (tx.currency) currFreq[tx.currency] = (currFreq[tx.currency] || 0) + 1;
+          }
+        });
+        suggestedAssetId = Object.entries(assetFreq).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+        suggestedCurrency = Object.entries(currFreq).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+      }
+
+      // 4. Saran item stok dari logbook yang cocok
+      const matchingStocks = tokens.length > 0
+        ? state.groceries
+            .filter(g => tokens.some(tok => (g.name || '').toLowerCase().includes(tok)))
+            .slice(0, 3)
+        : [];
+
+      return {
+        topCategories,
+        bestCategory,
+        bestType,
+        suggestedAssetId,
+        suggestedCurrency,
+        matchingStocks
+      };
+    }
+
+    function handleCategoryTyped() {
+      categoryManuallyEdited = Boolean(document.getElementById('fCategory').value.trim());
+      runSmartSuggestFromInputs(false);
+    }
+
+    function applySuggestedCategory(cat) {
+      document.getElementById('fCategory').value = cat;
+      categoryManuallyEdited = true;
+      runSmartSuggestFromInputs(false);
+      triggerHaptic(8);
+    }
+
+    function applySuggestedAccountAndCurr(assetId, curr) {
+      if (assetId && state.assets.some(a => a.id === assetId)) {
+        document.getElementById('fSource').value = assetId;
+      }
+      if (curr && CURRENCIES.includes(curr)) {
+        document.getElementById('fCurr').value = curr;
+      }
+      triggerHaptic(8);
+      showToast('Akun & mata uang saran diterapkan');
+      runSmartSuggestFromInputs(false);
+    }
+
+    function applySuggestedTxType(type) {
+      document.getElementById('fType').value = type;
+      syncFormFields();
+      triggerHaptic(8);
+      runSmartSuggestFromInputs(false);
+    }
+
+    function appendSuggestedStockItem(itemName) {
+      const box = document.getElementById('fItems');
+      const existing = box.value.split(',').map(s => s.trim()).filter(Boolean);
+      if (!existing.some(x => x.toLowerCase() === itemName.toLowerCase())) {
+        existing.push(itemName);
+        box.value = existing.join(', ');
+      }
+      triggerHaptic(8);
+      showToast(`Ditambahkan ke rincian item: ${itemName}`);
+    }
+
+    function runSmartSuggestFromInputs(forceAutoFill = false) {
+      const panel = document.getElementById('smartSuggestPanel');
+      if (!panel) return;
+
+      const note = document.getElementById('fNote')?.value || '';
+      const items = document.getElementById('fItems')?.value || '';
+      const currentCat = document.getElementById('fCategory')?.value || '';
+      const currentType = document.getElementById('fType')?.value || 'Expense';
+      const currentSource = document.getElementById('fSource')?.value || '';
+      const currentCurr = document.getElementById('fCurr')?.value || 'IDR';
+
+      const combinedText = `${note} ${items}`.trim();
+      const sug = inferSmartSuggestion(combinedText, currentCat);
+
+      // Auto-isi kategori jika belum diisi manual dan ada saran kuat
+      if ((forceAutoFill || !categoryManuallyEdited) && !currentCat && sug.topCategories.length > 0 && combinedText.length >= 2) {
+        document.getElementById('fCategory').value = sug.topCategories[0];
+      }
+
+      const chips = [];
+
+      // Chip saran kategori
+      sug.topCategories.forEach(cat => {
+        if (cat.toLowerCase() !== (document.getElementById('fCategory').value || '').trim().toLowerCase()) {
+          chips.push(`<button type="button" class="chip-btn" onclick="applySuggestedCategory('${escapeHtml(cat).replace(/'/g, "\\'")}')">Kategori: ${escapeHtml(cat)}</button>`);
+        }
+      });
+
+      // Chip saran tipe transaksi
+      if (sug.bestType && sug.bestType !== currentType && combinedText.length >= 3) {
+        chips.push(`<button type="button" class="chip-btn" onclick="applySuggestedTxType('${sug.bestType}')">Ubah Tipe → ${sug.bestType}</button>`);
+      }
+
+      // Chip saran akun & mata uang berdasarkan riwayat kategori
+      if (sug.suggestedAssetId) {
+        const assetObj = state.assets.find(a => a.id === sug.suggestedAssetId);
+        const targetCurr = sug.suggestedCurrency || assetObj?.currency || currentCurr;
+        if (assetObj && (assetObj.id !== currentSource || targetCurr !== currentCurr)) {
+          chips.push(`<button type="button" class="chip-btn" onclick="applySuggestedAccountAndCurr('${assetObj.id}', '${targetCurr}')">Akun Biasa: ${escapeHtml(assetObj.name)} (${targetCurr})</button>`);
+        }
+      }
+
+      // Chip saran item stok serupa
+      if (currentType === 'Expense' && sug.matchingStocks.length > 0) {
+        sug.matchingStocks.forEach(st => {
+          chips.push(`<button type="button" class="chip-btn" onclick="appendSuggestedStockItem('${escapeHtml(st.name).replace(/'/g, "\\'")}')">+ Stok: ${escapeHtml(st.name)} (Sisa ${st.stock})</button>`);
+        });
+      }
+
+      if (!chips.length) {
+        panel.classList.add('hidden');
+        panel.innerHTML = '';
+        return;
+      }
+
+      panel.classList.remove('hidden');
+      panel.innerHTML = `
+        <div style="font-weight:700;font-size:11px;">✨ Saran Cerdas Otomatis (1-Ketuk)</div>
+        <div class="smart-suggest-row">${chips.join('')}</div>
+      `;
+    }
+
+    function updateStockNameSuggestions() {
+      const bar = document.getElementById('directStockSuggestBar');
+      const q = (document.getElementById('sName')?.value || '').toLowerCase().trim();
+      if (!bar || q.length < 2) {
+        if (bar) {
+          bar.classList.add('hidden');
+          bar.innerHTML = '';
+        }
+        return;
+      }
+      const matches = state.groceries
+        .filter(g => (g.name || '').toLowerCase().includes(q))
+        .slice(0, 4);
+
+      if (!matches.length) {
+        bar.classList.add('hidden');
+        bar.innerHTML = '';
+        return;
+      }
+
+      bar.classList.remove('hidden');
+      bar.innerHTML = matches.map(m => `
+        <button type="button" class="chip-btn" onclick="pickExistingStockTemplate('${escapeHtml(m.name).replace(/'/g, "\\'")}', ${Number(m.minStock) ?? 1})">
+          ${escapeHtml(m.name)} (Stok: ${m.stock}, Min: ${m.minStock})
+        </button>
+      `).join('');
+    }
+
+    function pickExistingStockTemplate(name, minStock) {
+      document.getElementById('sName').value = name;
+      document.getElementById('sMin').value = minStock;
+      document.getElementById('directStockSuggestBar').classList.add('hidden');
+      triggerHaptic(8);
+    }
 
     function triggerHaptic(ms = 12) {
       if (state.interactiveFx?.peekHaptic && typeof navigator.vibrate === 'function') {
@@ -1282,7 +1533,9 @@
 
     function applyQuickPreset(cat, amt) {
       document.getElementById('fCategory').value = cat;
+      categoryManuallyEdited = true;
       document.getElementById('fAmount').value = amt;
+      runSmartSuggestFromInputs(false);
       triggerHaptic(10);
       showToast(`Diisi cepat: ${cat} (${amt})`);
     }
@@ -1421,13 +1674,13 @@
       const body = document.getElementById('onDemandQuickParseBody');
       body.innerHTML = `
         <p class="asset-meta" style="margin-top:0;margin-bottom:10px;">
-          Tulis catatan bebas, contoh: <em>"makan siang 950 JPY di Seicomart"</em> atau <em>"gaji 227000 JPY"</em>.
+          Tulis catatan bebas, contoh: <em>"makan siang 950 JPY di Seicomart"</em> atau <em>"gaji 227000 JPY"</em>. Smart Suggest otomatis mendeteksi tipe, kategori, akun, dan mata uang.
         </p>
         <div class="form-group">
           <label for="qpRawText">Catatan Mentah</label>
           <textarea id="qpRawText" placeholder="Contoh: kopi latte 480 JPY Lawson"></textarea>
         </div>
-        <button type="button" class="btn btn-secondary" style="margin-bottom:10px;" onclick="parseRawTextDraft()">⚡ Ekstrak Draf</button>
+        <button type="button" class="btn btn-secondary" style="margin-bottom:10px;" onclick="parseRawTextDraft()">⚡ Ekstrak Draf Cerdas</button>
         <div id="qpResultBox" class="stat-box hidden" style="margin-bottom:10px;"></div>
         <button type="button" class="btn hidden" id="qpApplyBtn" onclick="applyQuickParseToForm()">Masukkan ke Form Input</button>
       `;
@@ -1440,8 +1693,11 @@
         showToast('Tulis catatan mentah dulu');
         return;
       }
-      const lower = raw.toLowerCase();
-      let currency = state.displayCurrency;
+      const smart = inferSmartSuggestion(raw, '');
+      const type = smart.bestType || 'Expense';
+      const category = smart.topCategories[0] || (type === 'Income' ? 'Gaji / Pemasukan' : 'Lainnya');
+
+      let currency = smart.suggestedCurrency || state.displayCurrency;
       if (/\bjpy\b|¥|yen/i.test(raw)) currency = 'JPY';
       else if (/\busd\b|\$/i.test(raw)) currency = 'USD';
       else if (/\bidr\b|\brp\b|ribu|jt/i.test(raw)) currency = 'IDR';
@@ -1455,20 +1711,23 @@
         else if (/ribu/i.test(raw) && amount < 1000) amount *= 1000;
       }
 
-      const type = /gaji|salary|bonus|masuk|income/i.test(lower) ? 'Income' : 'Expense';
-      let category = type === 'Income' ? 'Gaji / Pemasukan' : 'Lainnya';
-      if (/makan|nasi|bento|ramen|lunch|dinner/i.test(lower)) category = 'Makanan';
-      else if (/kopi|coffee|latte|minum/i.test(lower)) category = 'Kopi & Minuman';
-      else if (/kereta|bus|train|transport|bensin/i.test(lower)) category = 'Transportasi';
-      else if (/listrik|air|gas|internet|tagihan/i.test(lower)) category = 'Utilitas & Tagihan';
+      const accName = state.assets.find(a => a.id === smart.suggestedAssetId)?.name || 'Default';
+      quickParseDraft = {
+        type,
+        category,
+        currency,
+        amount,
+        note: raw,
+        suggestedAssetId: smart.suggestedAssetId
+      };
 
-      quickParseDraft = { type, category, currency, amount, note: raw };
       const box = document.getElementById('qpResultBox');
       box.innerHTML = `
-        <div class="stat-label">Hasil Ekstrak Draf</div>
+        <div class="stat-label">Hasil Ekstrak + Smart Suggest</div>
         <div style="font-size:13px;margin-top:4px;">
           <strong>Tipe:</strong> ${escapeHtml(type)} · <strong>Kategori:</strong> ${escapeHtml(category)}<br/>
           <strong>Nominal:</strong> ${amount > 0 ? formatMoney(amount, currency) : 'Belum terdeteksi'} (${currency})<br/>
+          <strong>Saran Akun:</strong> ${escapeHtml(accName)}<br/>
           <strong>Catatan:</strong> ${escapeHtml(raw)}
         </div>
       `;
@@ -1480,11 +1739,16 @@
       if (!quickParseDraft) return;
       openQuickForm(quickParseDraft.type);
       document.getElementById('fCategory').value = quickParseDraft.category;
+      categoryManuallyEdited = true;
+      if (quickParseDraft.suggestedAssetId && state.assets.some(a => a.id === quickParseDraft.suggestedAssetId)) {
+        document.getElementById('fSource').value = quickParseDraft.suggestedAssetId;
+      }
       document.getElementById('fCurr').value = quickParseDraft.currency;
       if (quickParseDraft.amount > 0) document.getElementById('fAmount').value = quickParseDraft.amount;
       document.getElementById('fNote').value = quickParseDraft.note;
+      runSmartSuggestFromInputs(false);
       closeOnDemandModal('onDemandQuickParseModal');
-      showToast('Draf masuk ke form input');
+      showToast('Draf cerdas masuk ke form input');
     }
 
     // --- SAVED VIEWS ---
@@ -1688,6 +1952,7 @@
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY)
+          || localStorage.getItem('money_x_pro_state_v11')
           || localStorage.getItem('money_x_pro_state_v10')
           || localStorage.getItem('money_x_pro_state_v9')
           || localStorage.getItem('money_x_pro_state_v8')
@@ -1965,6 +2230,7 @@
         return;
       }
       switchTab('input');
+      categoryManuallyEdited = false;
       document.getElementById('editId').value = '';
       document.getElementById('fType').value = type;
       const nowISO = todayISO();
@@ -1975,14 +2241,17 @@
       document.getElementById('fTargetAmount').value = '';
       document.getElementById('fNote').value = '';
       document.getElementById('fItems').value = '';
-      document.getElementById('fCategory').value =
-        type === 'Transfer' ? 'Transfer Antar Aset' : (type === 'Liability' ? 'Auto-Debit Tagihan' : '');
+      const defaultCat = type === 'Transfer' ? 'Transfer Antar Aset' : (type === 'Liability' ? 'Auto-Debit Tagihan' : '');
+      document.getElementById('fCategory').value = defaultCat;
+      categoryManuallyEdited = Boolean(defaultCat);
       clearReceiptPhoto();
       syncFormFields();
       autoMatchCurrency();
+      runSmartSuggestFromInputs(false);
     }
 
     function resetForm() {
+      categoryManuallyEdited = false;
       document.getElementById('editId').value = '';
       document.getElementById('fType').value = 'Expense';
       document.getElementById('fCategory').value = '';
@@ -1997,6 +2266,7 @@
       document.getElementById('submitBtn').textContent = 'Simpan Transaksi';
       clearReceiptPhoto();
       syncFormFields();
+      runSmartSuggestFromInputs(false);
     }
 
     function syncFormFields() {
@@ -2229,7 +2499,8 @@
       }
 
       clearReceiptPhoto();
-      showToast('Data masuk ke form & foto dihapus');
+      runSmartSuggestFromInputs(true);
+      showToast('Data masuk ke form, saran kategori aktif & foto dihapus');
     }
 
     function applyTransactionEffect(tx, sign = 1) {
@@ -2306,6 +2577,7 @@
 
       document.getElementById('sName').value = '';
       document.getElementById('sQty').value = '1';
+      document.getElementById('directStockSuggestBar')?.classList.add('hidden');
       saveState();
       renderAll();
       showToast('Stok barang disimpan ke logbook');
@@ -2426,6 +2698,7 @@
       const tx = state.transactions.find(t => t.id === id);
       if (!tx) return;
       switchTab('input');
+      categoryManuallyEdited = true;
       document.getElementById('editId').value = tx.id;
       document.getElementById('fType').value = tx.type;
       document.getElementById('fCategory').value = tx.category;
@@ -2440,6 +2713,7 @@
       document.getElementById('cancelEditBtn').classList.remove('hidden');
       document.getElementById('submitBtn').textContent = 'Update Transaksi';
       syncFormFields();
+      runSmartSuggestFromInputs(false);
     }
 
     function deleteTransaction(id) {
