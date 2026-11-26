@@ -10,19 +10,26 @@
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
     :root {
-      --bg: #0d1017;
-      --surface: #141923;
-      --surface-2: #1c2331;
-      --border: #2a3447;
+      --bg: #0d1118;
+      --surface: #151b26;
+      --surface-2: #1d2534;
+      --border: #2b364b;
       --text: #f8fafc;
       --muted: #94a3b8;
       --accent: #10b981;
       --accent-soft: rgba(16, 185, 129, 0.16);
-      --green: #10b981;
-      --red: #f43f5e;
-      --amber: #f59e0b;
+      --green: #34d399;
+      --red: #fb7185;
+      --amber: #fb923c;
+      --transfer: #60a5fa;
       --radius-card: 18px;
       --radius-btn: 12px;
+      --anim-speed: 0.22s;
+    }
+
+    body.no-motion * {
+      transition: none !important;
+      animation: none !important;
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -71,8 +78,9 @@
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
+      transition: transform var(--anim-speed) ease, border-color var(--anim-speed) ease, background var(--anim-speed) ease;
     }
-    .icon-btn:active { transform: scale(0.97); }
+    .icon-btn:active { transform: scale(0.96); }
 
     .container { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
 
@@ -83,6 +91,22 @@
       padding: 16px;
       margin-bottom: 14px;
       box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+      transition: transform var(--anim-speed) ease, border-color var(--anim-speed) ease;
+    }
+
+    body.fx-motion .card:hover,
+    body.fx-motion .menu-tile:hover {
+      transform: translateY(-2px);
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+    }
+
+    @keyframes popBump {
+      0% { transform: scale(1); }
+      45% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+    body.fx-counter .pop-active {
+      animation: popBump 0.26s ease;
     }
 
     .portfolio-head {
@@ -143,13 +167,15 @@
       cursor: pointer;
       color: #07120e;
       background: var(--accent);
+      transition: transform var(--anim-speed) ease, opacity var(--anim-speed) ease;
     }
+    .btn:active { transform: scale(0.97); }
     .btn-secondary {
       background: var(--surface-2);
       color: var(--text);
       border: 1px solid var(--border);
     }
-    .btn-danger { background: rgba(244, 63, 94, 0.16); color: #fda4af; border: 1px solid rgba(244, 63, 94, 0.35); }
+    .btn-danger { background: rgba(251, 113, 133, 0.16); color: #fda4af; border: 1px solid rgba(251, 113, 133, 0.35); }
     .btn-green { background: var(--accent-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
 
     .section-title {
@@ -176,12 +202,21 @@
     .asset-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .asset-right { text-align: right; }
     .asset-main { font-weight: 700; font-size: 14px; color: var(--text); }
+    .amt-income { color: var(--green) !important; }
+    .amt-expense { color: var(--red) !important; }
+    .amt-liability { color: var(--amber) !important; }
+    .amt-transfer { color: var(--transfer) !important; }
     .asset-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
     .bar-row { margin-bottom: 10px; }
     .bar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: var(--text); }
     .bar-track { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
-    .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #ffffff 20%)); border-radius: 999px; }
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #ffffff 20%));
+      border-radius: 999px;
+      transition: width var(--anim-speed) ease;
+    }
 
     .grid-2x2 {
       display: grid;
@@ -196,11 +231,58 @@
       text-align: left;
       color: var(--text);
       cursor: pointer;
+      transition: transform var(--anim-speed) ease, border-color var(--anim-speed) ease;
     }
     .menu-tile:hover { border-color: var(--accent); }
     .menu-icon { font-size: 22px; margin-bottom: 8px; display: block; }
     .menu-title { font-weight: 700; font-size: 14px; color: var(--text); }
     .menu-desc { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    .quick-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .chip-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 6px 11px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .chip-btn:hover { border-color: var(--accent); }
+
+    .fx-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .switch-pill {
+      min-width: 64px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      background: var(--surface);
+      color: var(--muted);
+    }
+    .switch-pill.on {
+      background: var(--accent-soft);
+      color: var(--green);
+      border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    }
 
     .theme-grid {
       display: grid;
@@ -262,12 +344,12 @@
       font-weight: 700;
       margin-left: 6px;
     }
-    .tag-expense { background: rgba(244, 63, 94, 0.16); color: #fda4af; }
-    .tag-income { background: rgba(16, 185, 129, 0.16); color: #6ee7b7; }
-    .tag-liability { background: rgba(245, 158, 11, 0.16); color: #fcd34d; }
-    .tag-transfer { background: rgba(59, 130, 246, 0.18); color: #93c5fd; }
-    .tag-low { background: rgba(245, 158, 11, 0.18); color: #fcd34d; }
-    .tag-empty { background: rgba(244, 63, 94, 0.18); color: #fda4af; }
+    .tag-expense { background: rgba(251, 113, 133, 0.16); color: #fda4af; }
+    .tag-income { background: rgba(52, 211, 153, 0.16); color: #6ee7b7; }
+    .tag-liability { background: rgba(251, 146, 60, 0.18); color: #fdba74; }
+    .tag-transfer { background: rgba(96, 165, 250, 0.18); color: #93c5fd; }
+    .tag-low { background: rgba(251, 146, 60, 0.18); color: #fdba74; }
+    .tag-empty { background: rgba(251, 113, 133, 0.18); color: #fda4af; }
 
     .ocr-box {
       background: var(--surface-2);
@@ -341,7 +423,7 @@
 
     @media print {
       body { background: #fff !important; color: #111 !important; padding-bottom: 0 !important; }
-      .top-actions, .bottom-nav, .quick-row, .filters, .icon-btn, .modal-backdrop, #toast { display: none !important; }
+      .top-actions, .bottom-nav, .quick-row, .filters, .icon-btn, .modal-backdrop, #toast, .quick-chips { display: none !important; }
       .topbar { position: static; background: #fff !important; border-bottom: 2px solid #ddd; }
       .card { background: #fff !important; border: 1px solid #ccc !important; break-inside: avoid; }
       .stat-box { background: #f8fafc !important; border: 1px solid #ddd !important; }
@@ -361,7 +443,7 @@
       </div>
     </div>
     <div class="top-actions">
-      <button class="icon-btn" onclick="openThemeModal()">Tema</button>
+      <button class="icon-btn" onclick="openThemeModal()">Tema & FX</button>
       <button class="icon-btn" onclick="openSyncModal()">Cloud</button>
       <button class="icon-btn" onclick="openRatesModal()">Kurs</button>
       <button class="icon-btn" onclick="exportBackupJSON()">Backup</button>
@@ -389,19 +471,19 @@
         <div class="stats-grid">
           <div class="stat-box">
             <div class="stat-label">Expense / Bulan</div>
-            <div class="stat-val" id="statMonth">Rp 0</div>
+            <div class="stat-val amt-expense" id="statMonth">Rp 0</div>
           </div>
           <div class="stat-box">
             <div class="stat-label">Expense Hari Ini</div>
-            <div class="stat-val" id="statToday">Rp 0</div>
+            <div class="stat-val amt-expense" id="statToday">Rp 0</div>
           </div>
           <div class="stat-box">
             <div class="stat-label">Total Auto-Debit Pending</div>
-            <div class="stat-val" id="statDebt">Rp 0</div>
+            <div class="stat-val amt-liability" id="statDebt">Rp 0</div>
           </div>
           <div class="stat-box">
             <div class="stat-label">Jatuh Tempo Bulan Depan</div>
-            <div class="stat-val" id="statNextMonthDue">Rp 0</div>
+            <div class="stat-val amt-liability" id="statNextMonthDue">Rp 0</div>
           </div>
         </div>
 
@@ -464,8 +546,8 @@
       <div class="grid-2x2" style="margin-bottom:14px;">
         <button class="menu-tile" onclick="openThemeModal()">
           <span class="menu-icon">🎨</span>
-          <div class="menu-title">5 Tema & Kustomisasi</div>
-          <div class="menu-desc">Ganti tema abu-hijau & warna modern</div>
+          <div class="menu-title">5 Tema & 3 Fitur FX</div>
+          <div class="menu-desc">Atur tema & saklar ON/OFF fitur interaktif</div>
         </button>
         <button class="menu-tile" onclick="exportReportCSV()">
           <span class="menu-icon">📊</span>
@@ -558,6 +640,13 @@
         <div class="section-title">
           <span id="formTitle">Form Input Expense</span>
           <button type="button" class="icon-btn hidden" id="cancelEditBtn" onclick="resetForm()">Batal</button>
+        </div>
+
+        <div class="quick-chips" id="quickChipsBar">
+          <button type="button" class="chip-btn" onclick="applyQuickPreset('Makanan', 1000)">+ Makanan (1.000)</button>
+          <button type="button" class="chip-btn" onclick="applyQuickPreset('Kopi & Minuman', 500)">+ Kopi (500)</button>
+          <button type="button" class="chip-btn" onclick="applyQuickPreset('Transportasi', 300)">+ Transport (300)</button>
+          <button type="button" class="chip-btn" onclick="applyQuickPreset('Utilitas & Tagihan', 5000)">+ Tagihan (5.000)</button>
         </div>
 
         <form onsubmit="handleFormSubmit(event)">
@@ -690,14 +779,41 @@
     </section>
   </div>
 
-  <!-- MODAL 5 TEMA & KUSTOMISASI -->
+  <!-- MODAL 5 TEMA + 3 FITUR INTERAKTIF + KUSTOMISASI -->
   <div id="themeModal" class="modal-backdrop hidden">
-    <div class="card" style="width:100%;max-width:440px;margin:0;max-height:88vh;overflow-y:auto;">
+    <div class="card" style="width:100%;max-width:450px;margin:0;max-height:88vh;overflow-y:auto;">
       <div class="section-title">
-        <span>5 Tema Modern & Kustomisasi</span>
+        <span>Tema, 3 Fitur Interaktif & Gaya</span>
         <button class="icon-btn" onclick="closeThemeModal()">✕</button>
       </div>
 
+      <div class="label-muted" style="margin-bottom:8px;">3 Fitur Interaktif (Bisa Dimatikan Kapan Saja)</div>
+
+      <div class="fx-toggle-row">
+        <div>
+          <div style="font-weight:700;font-size:13px;">1. Smooth Motion & Lift</div>
+          <div class="asset-meta">Animasi halus & angkat ringan saat disentuh</div>
+        </div>
+        <button type="button" class="switch-pill" id="btnFxMotion" onclick="toggleInteractiveFx('motion')">ON</button>
+      </div>
+
+      <div class="fx-toggle-row">
+        <div>
+          <div style="font-weight:700;font-size:13px;">2. Quick-Add Chips & Pop</div>
+          <div class="asset-meta">Pintasan kategori/nominal cepat + efek pop angka</div>
+        </div>
+        <button type="button" class="switch-pill" id="btnFxQuickPop" onclick="toggleInteractiveFx('quickPop')">ON</button>
+      </div>
+
+      <div class="fx-toggle-row" style="margin-bottom:14px;">
+        <div>
+          <div style="font-weight:700;font-size:13px;">3. Card Peek & Haptic</div>
+          <div class="asset-meta">Ketuk item untuk ringkasan detail + getar ringan</div>
+        </div>
+        <button type="button" class="switch-pill" id="btnFxPeekHaptic" onclick="toggleInteractiveFx('peekHaptic')">ON</button>
+      </div>
+
+      <div class="label-muted" style="margin-bottom:8px;">5 Tema Warna Modern</div>
       <div class="theme-grid" id="themePresetList"></div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -788,7 +904,7 @@
   </nav>
 
   <script>
-    const STORAGE_KEY = 'money_x_pro_state_v8';
+    const STORAGE_KEY = 'money_x_pro_state_v9';
     const CURRENCIES = ['IDR', 'JPY', 'USD'];
 
     const THEME_PRESETS = {
@@ -863,6 +979,11 @@
         surface: '#151b26',
         radiusStyle: 'modern'
       },
+      interactiveFx: {
+        motion: true,
+        quickPop: true,
+        peekHaptic: true
+      },
       ratesToIDR: { IDR: 1, JPY: 114, USD: 18000 },
       rateMeta: { mode: 'auto', updatedAt: null },
       syncUrl: '',
@@ -910,6 +1031,63 @@
     let parsedFormattedItems = [];
     let parsedOcrAmount = null;
 
+    function triggerHaptic(ms = 12) {
+      if (state.interactiveFx?.peekHaptic && typeof navigator.vibrate === 'function') {
+        try { navigator.vibrate(ms); } catch {}
+      }
+    }
+
+    function applyInteractiveFxClasses() {
+      const fx = state.interactiveFx || DEFAULT_STATE.interactiveFx;
+      document.body.classList.toggle('no-motion', !fx.motion);
+      document.body.classList.toggle('fx-motion', Boolean(fx.motion));
+      document.body.classList.toggle('fx-counter', Boolean(fx.quickPop));
+      document.getElementById('quickChipsBar')?.classList.toggle('hidden', !fx.quickPop);
+
+      const syncPill = (id, active) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = active ? 'ON' : 'OFF';
+        el.classList.toggle('on', Boolean(active));
+      };
+      syncPill('btnFxMotion', fx.motion);
+      syncPill('btnFxQuickPop', fx.quickPop);
+      syncPill('btnFxPeekHaptic', fx.peekHaptic);
+    }
+
+    function toggleInteractiveFx(key) {
+      state.interactiveFx = {
+        ...(state.interactiveFx || DEFAULT_STATE.interactiveFx),
+        [key]: !state.interactiveFx?.[key]
+      };
+      saveState();
+      applyInteractiveFxClasses();
+      renderAll();
+      showToast(`Fitur ${key}: ${state.interactiveFx[key] ? 'ON' : 'OFF'}`);
+    }
+
+    function applyQuickPreset(cat, amt) {
+      document.getElementById('fCategory').value = cat;
+      document.getElementById('fAmount').value = amt;
+      triggerHaptic(10);
+      showToast(`Diisi cepat: ${cat} (${amt})`);
+    }
+
+    function peekSummary(text) {
+      if (!state.interactiveFx?.peekHaptic) return;
+      triggerHaptic(12);
+      showToast(text);
+    }
+
+    function pulseTotalPop() {
+      if (!state.interactiveFx?.quickPop) return;
+      const el = document.getElementById('portfolioTotal');
+      if (!el) return;
+      el.classList.remove('pop-active');
+      void el.offsetWidth;
+      el.classList.add('pop-active');
+    }
+
     function applyTheme(customTheme = state.theme) {
       const th = customTheme || DEFAULT_STATE.theme;
       const preset = THEME_PRESETS[th.preset] || THEME_PRESETS.emeraldSlate;
@@ -935,6 +1113,7 @@
       document.getElementById('customAccent').value = th.accent || '#10b981';
       document.getElementById('customSurface').value = th.surface || '#151b26';
       document.getElementById('customRadius').value = th.radiusStyle || 'modern';
+      applyInteractiveFxClasses();
       renderThemePresetList();
       document.getElementById('themeModal').classList.remove('hidden');
     }
@@ -1002,10 +1181,12 @@
 
     function resetThemeDefault() {
       state.theme = structuredClone(DEFAULT_STATE.theme);
+      state.interactiveFx = structuredClone(DEFAULT_STATE.interactiveFx);
       saveState();
       applyTheme(state.theme);
+      applyInteractiveFxClasses();
       openThemeModal();
-      showToast('Tema dikembalikan ke Emerald Slate');
+      showToast('Tema & fitur FX dikembalikan ke awal');
     }
 
     function normalizeImportedState(parsed, keepSyncUrl = '') {
@@ -1014,6 +1195,7 @@
         ...base,
         ...parsed,
         theme: { ...base.theme, ...(parsed.theme || {}) },
+        interactiveFx: { ...base.interactiveFx, ...(parsed.interactiveFx || {}) },
         syncUrl: parsed.syncUrl || keepSyncUrl || '',
         ratesToIDR: { ...base.ratesToIDR, ...(parsed.ratesToIDR || {}) },
         rateMeta: { ...base.rateMeta, ...(parsed.rateMeta || {}) },
@@ -1030,6 +1212,7 @@
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY)
+          || localStorage.getItem('money_x_pro_state_v8')
           || localStorage.getItem('money_x_pro_state_v7')
           || localStorage.getItem('money_x_pro_state_v6')
           || localStorage.getItem('money_x_pro_state_v5');
@@ -1130,6 +1313,8 @@
       state.displayCurrency = CURRENCIES[(idx + step + CURRENCIES.length) % CURRENCIES.length];
       saveState();
       renderAll();
+      pulseTotalPop();
+      triggerHaptic(10);
     }
 
     function switchTab(tab) {
@@ -1137,6 +1322,7 @@
         document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
         document.getElementById('nav-' + t).classList.toggle('active', t === tab);
       });
+      triggerHaptic(8);
       renderAll();
     }
 
@@ -1208,6 +1394,7 @@
       if (!skipSave) {
         saveState();
         renderAll();
+        pulseTotalPop();
         showToast('Hutang dilunasi & tercatat sebagai Expense');
       }
     }
@@ -1236,6 +1423,7 @@
 
       saveState();
       renderAll();
+      pulseTotalPop();
       showToast('Auto-debit dibatalkan & saldo dikembalikan');
     }
 
@@ -1598,6 +1786,7 @@
       item.stock = Math.max(0, (Number(item.stock) || 0) + delta);
       saveState();
       renderAll();
+      triggerHaptic(8);
     }
 
     function handleFormSubmit(e) {
@@ -1693,6 +1882,8 @@
       saveState();
       resetForm();
       switchTab('dashboard');
+      pulseTotalPop();
+      triggerHaptic(15);
     }
 
     function editTransaction(id) {
@@ -1722,6 +1913,7 @@
       state.transactions.splice(idx, 1);
       saveState();
       renderAll();
+      pulseTotalPop();
       showToast('Transaksi dihapus');
     }
 
@@ -1751,6 +1943,7 @@
       document.getElementById('aBalance').value = '';
       saveState();
       renderAll();
+      pulseTotalPop();
     }
 
     function deleteAsset(id) {
@@ -1844,6 +2037,7 @@
         if (Array.isArray(payload.assets) && Array.isArray(payload.transactions)) {
           state = normalizeImportedState(payload, url);
           applyTheme(state.theme);
+          applyInteractiveFxClasses();
           processDueAutoDebits(true);
           saveState();
           renderAll();
@@ -1870,11 +2064,14 @@
       if (!confirm('Reset aset dan saldo ke bawaan awal?')) return;
       const keepUrl = state.syncUrl || '';
       const keepTheme = state.theme || DEFAULT_STATE.theme;
+      const keepFx = state.interactiveFx || DEFAULT_STATE.interactiveFx;
       state = structuredClone(DEFAULT_STATE);
       state.syncUrl = keepUrl;
       state.theme = keepTheme;
+      state.interactiveFx = keepFx;
       saveState();
       applyTheme(state.theme);
+      applyInteractiveFxClasses();
       fetchOnlineRates(false);
       renderAll();
       showToast('Data awal dipulihkan');
@@ -1904,6 +2101,7 @@
           }
           state = normalizeImportedState(data, state.syncUrl);
           applyTheme(state.theme);
+          applyInteractiveFxClasses();
           processDueAutoDebits(true);
           saveState();
           renderAll();
@@ -1935,6 +2133,14 @@
     function exportReportPrintable() {
       switchTab('dashboard');
       setTimeout(() => window.print(), 150);
+    }
+
+    function getAmountColorClass(type) {
+      if (type === 'Income') return 'amt-income';
+      if (type === 'Expense') return 'amt-expense';
+      if (type === 'Liability') return 'amt-liability';
+      if (type === 'Transfer') return 'amt-transfer';
+      return '';
     }
 
     function escapeHtml(str) {
@@ -2029,13 +2235,14 @@
       } else {
         assetListEl.innerHTML = state.assets.map(a => {
           const converted = convertCurrency(a.balance, a.currency, disp);
+          const peekMsg = `${a.name}: ${formatMoney(a.balance, a.currency)}${a.currency !== disp ? ' (≈ ' + formatMoney(converted, disp) + ')' : ''}`;
           return `
-            <div class="asset-item">
+            <div class="asset-item" onclick="peekSummary('${escapeHtml(peekMsg).replace(/'/g, "\\'")}')">
               <div>
                 <div class="asset-name">${escapeHtml(a.name)}</div>
                 <div class="asset-meta">${a.id} · Akun ${a.currency}</div>
               </div>
-              <div class="asset-right">
+              <div class="asset-right" onclick="event.stopPropagation()">
                 <div class="asset-main">${formatMoney(a.balance, a.currency)}</div>
                 <div class="asset-sub">${a.currency !== disp ? '≈ ' + formatMoney(converted, disp) : '&nbsp;'}</div>
                 <div style="margin-top:4px;display:flex;gap:6px;justify-content:flex-end;">
@@ -2076,6 +2283,7 @@
       } else {
         txListEl.innerHTML = filteredTx.map(t => {
           const tagClass = `tag-${t.type.toLowerCase()}`;
+          const amtColorClass = getAmountColorClass(t.type);
           const srcName = state.assets.find(a => a.id === t.sourceAssetId)?.name || '-';
           const tgtName = state.assets.find(a => a.id === t.targetAssetId)?.name;
           const accLabel = t.type === 'Transfer' && tgtName ? `${srcName} → ${tgtName}` : srcName;
@@ -2084,9 +2292,10 @@
           const dueInfo = t.type === 'Liability'
             ? ` · Pelunasan: ${t.dueDate || '-'} (${isPaidLiability ? 'Lunas/Terdebit' : 'Menunggu Auto-Debit'})`
             : '';
+          const peekMsg = `${t.type} · ${t.category}: ${formatMoney(t.amount, t.currency)} (${accLabel})`;
 
           return `
-            <div class="tx-item">
+            <div class="tx-item" onclick="peekSummary('${escapeHtml(peekMsg).replace(/'/g, "\\'")}')">
               <div>
                 <div class="asset-name">
                   ${escapeHtml(t.category)}
@@ -2094,8 +2303,8 @@
                 </div>
                 <div class="asset-meta">Cetak: ${t.date} · ${escapeHtml(accLabel)}${dueInfo}${t.note ? ' · ' + escapeHtml(t.note) : ''}</div>
               </div>
-              <div class="asset-right">
-                <div class="asset-main">${formatMoney(t.amount, t.currency)}</div>
+              <div class="asset-right" onclick="event.stopPropagation()">
+                <div class="asset-main ${amtColorClass}">${formatMoney(t.amount, t.currency)}</div>
                 <div style="margin-top:4px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
                   ${isPendingLiability ? `<button type="button" class="icon-btn btn-green" onclick="settleLiabilityItem(state.transactions.find(x=>x.id==='${t.id}'))">Lunasi</button>` : ''}
                   ${isPaidLiability ? `<button type="button" class="icon-btn" onclick="revertLiabilitySettlement('${t.id}')">Batalkan</button>` : ''}
@@ -2160,6 +2369,7 @@
     }
 
     applyTheme(state.theme);
+    applyInteractiveFxClasses();
     document.getElementById('fDate').value = todayISO();
     processDueAutoDebits(true);
     renderAll();
