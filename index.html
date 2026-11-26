@@ -749,17 +749,31 @@
         renderAll();
         return;
       }
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 6000);
-        const res = await fetch('https://open.er-api.com/v6/latest/IDR', { signal: controller.signal });
-        clearTimeout(timer);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        if (data && data.rates && data.rates.USD && data.rates.JPY) {
-          const usdToIdr = Math.round(1 / data.rates.USD);
-          const jpyToIdr = Number((1 / data.rates.JPY).toFixed(2));
-          if (usdToIdr > 0 && jpyToIdr > 0) {
+
+      const endpoints = [
+        async () => {
+          const r = await fetch('https://open.er-api.com/v6/latest/USD', { cache: 'no-store' });
+          if (!r.ok) throw new Error('er-api');
+          const d = await r.json();
+          const idrPerUsd = Number(d?.rates?.IDR);
+          const idrPerJpy = d?.rates?.JPY ? idrPerUsd / Number(d.rates.JPY) : NaN;
+          return { usdToIdr: Math.round(idrPerUsd), jpyToIdr: Number(idrPerJpy.toFixed(2)) };
+        },
+        async () => {
+          const r = await fetch('https://api.frankfurter.app/latest?from=USD&to=IDR,JPY', { cache: 'no-store' });
+          if (!r.ok) throw new Error('frankfurter');
+          const d = await r.json();
+          const idrPerUsd = Number(d?.rates?.IDR);
+          const jpyPerUsd = Number(d?.rates?.JPY);
+          const idrPerJpy = idrPerUsd && jpyPerUsd ? idrPerUsd / jpyPerUsd : NaN;
+          return { usdToIdr: Math.round(idrPerUsd), jpyToIdr: Number(idrPerJpy.toFixed(2)) };
+        }
+      ];
+
+      for (const loader of endpoints) {
+        try {
+          const { usdToIdr, jpyToIdr } = await loader();
+          if (Number.isFinite(usdToIdr) && usdToIdr > 0 && Number.isFinite(jpyToIdr) && jpyToIdr > 0) {
             state.ratesToIDR.USD = usdToIdr;
             state.ratesToIDR.JPY = jpyToIdr;
             state.rateMeta = {
@@ -769,18 +783,21 @@
               })
             };
             saveState();
-            if (!document.getElementById('ratesModal').classList.contains('hidden')) {
-              document.getElementById('rUsd').value = state.ratesToIDR.USD;
-              document.getElementById('rJpy').value = state.ratesToIDR.JPY;
-            }
+            const rUsd = document.getElementById('rUsd');
+            const rJpy = document.getElementById('rJpy');
+            if (rUsd) rUsd.value = state.ratesToIDR.USD;
+            if (rJpy) rJpy.value = state.ratesToIDR.JPY;
             renderAll();
-            if (forceUserAction) showToast('Kurs online diperbarui');
+            if (forceUserAction) showToast(`Kurs online diperbarui (1 USD ≈ ${usdToIdr.toLocaleString('id-ID')} IDR)`);
+            return;
           }
+        } catch {
+          // coba endpoint berikutnya
         }
-      } catch {
-        if (forceUserAction) showToast('Gagal ambil kurs online, memakai kurs offline');
-        renderAll();
       }
+
+      if (forceUserAction) showToast('Gagal ambil kurs online — cek koneksi/pemblokir');
+      renderAll();
     }
 
     function convertCurrency(amount, fromCurr, toCurr) {
