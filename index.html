@@ -402,7 +402,7 @@
       height: 40px;
       cursor: pointer;
     }
-    textarea { min-height: 92px; resize: vertical; }
+    textarea { min-height: 76px; resize: vertical; }
 
     .filters {
       display: grid;
@@ -639,8 +639,10 @@
           </div>
         </div>
 
+        <!-- SAVED VIEWS (FILTER MULTI-KONDISI TERSIMPAN) -->
         <div class="quick-chips hidden" id="savedViewsBar"></div>
 
+        <!-- FILTER CEPAT PERIODE INSTAN -->
         <div class="quick-chips" id="periodChipsBar">
           <button type="button" class="chip-btn active" id="period-ALL" onclick="setQuickPeriod('ALL')">Semua</button>
           <button type="button" class="chip-btn" id="period-TODAY" onclick="setQuickPeriod('TODAY')">Hari Ini</button>
@@ -725,13 +727,13 @@
           <span class="label-muted" id="itemCountBadge">0 item</span>
         </div>
         <p class="asset-meta" style="margin-top:0;margin-bottom:10px;">
-          Format otomatis: <em>Brand - Product - Store (¥Harga)</em>. Foto struk tidak disimpan.
+          Format otomatis: <em>Brand - Product Type - Store</em> (English). Foto struk tidak disimpan.
         </p>
 
         <form onsubmit="handleDirectStockSubmit(event)" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">
           <div class="form-group" style="margin-bottom:8px;">
             <label for="sName">Tambah / Restok Barang Rumah Langsung</label>
-            <input type="text" id="sName" placeholder="Contoh: AGF Cafe Latory S - Satudora (¥297)" oninput="updateStockNameSuggestions()" required />
+            <input type="text" id="sName" placeholder="Contoh: Blendy - Instant Coffee Latte - Seicomart Sapporo" oninput="updateStockNameSuggestions()" required />
           </div>
           <div id="directStockSuggestBar" class="quick-chips hidden"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
@@ -798,6 +800,7 @@
           <button type="button" class="chip-btn" onclick="applyQuickPreset('Utilitas & Tagihan', 5000)">+ Tagihan (5.000)</button>
         </div>
 
+        <!-- PANEL SARAN CERDAS OTOMATIS -->
         <div id="smartSuggestPanel" class="smart-suggest-bar hidden"></div>
 
         <form onsubmit="handleFormSubmit(event)">
@@ -813,55 +816,36 @@
             </select>
           </div>
 
-          <!-- OCR PRO: PRE-PROCESS CANVAS + MULTI-ENGINE + AUTO-FILL -->
           <div class="ocr-box" id="ocrSection">
             <div class="section-title" style="margin-bottom:6px;">
-              <span>OCR Struk Pro → Item, Diskon & Total Otomatis</span>
+              <span>Scan Struk OCR → Brand - Product Type - Store (EN)</span>
               <button type="button" class="icon-btn btn-danger" onclick="clearReceiptPhoto()">Hapus Foto</button>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-              <div>
-                <label for="ocrLang">Bahasa Tesseract</label>
-                <select id="ocrLang">
-                  <option value="jpn+eng">Jepang + Inggris (jpn+eng)</option>
-                  <option value="eng+jpn">Inggris + Jepang (eng+jpn)</option>
-                  <option value="jpn">Jepang (jpn)</option>
-                </select>
-              </div>
-              <div>
-                <label for="ocrEngineMode">Mode Mesin OCR</label>
-                <select id="ocrEngineMode" onchange="saveOcrEndpoint()">
-                  <option value="smart">Auto (Cloud OCR jika ada, else Tesseract)</option>
-                  <option value="tesseract">Tesseract + Canvas Pre-Process</option>
-                  <option value="cloud">Cloud OCR Endpoint Saja</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-group" style="margin-bottom:8px;">
-              <label for="ocrCloudUrl">URL Cloud OCR / Vision Endpoint (Opsional — untuk akurasi kanji/katakana tertinggi)</label>
-              <input type="url" id="ocrCloudUrl" placeholder="https://script.google.com/macros/s/.../exec atau endpoint OCR" onchange="saveOcrEndpoint()" />
-            </div>
-
+            <label for="ocrLang">Bahasa OCR Struk</label>
+            <select id="ocrLang" style="margin-bottom:8px;">
+              <option value="eng+jpn">Inggris + Jepang (eng+jpn)</option>
+              <option value="eng">Inggris / Angka (eng)</option>
+              <option value="jpn">Jepang (jpn)</option>
+            </select>
             <input type="file" id="receiptInput" accept="image/*" capture="environment" onchange="handleReceiptPicked(event)" />
-            <div class="asset-meta" id="ocrStatus">Pilih/foto struk — akan diproses otomatis (kontras/skala diperjelas) & foto tidak disimpan.</div>
+            <div class="asset-meta" id="ocrStatus">Belum ada foto. Foto diproses sesaat lalu dihapus, tidak disimpan.</div>
             <img id="receiptPreview" class="ocr-preview hidden" alt="Pratinjau struk sementara" />
 
             <div class="form-group" style="margin-top:8px;margin-bottom:8px;">
-              <label for="ocrStore">Nama Toko (Store)</label>
-              <input type="text" id="ocrStore" placeholder="Contoh: Satudora" />
+              <label for="ocrStore">Asal Pembelian Toko (Store — otomatis dari baris atas struk, bisa diedit)</label>
+              <input type="text" id="ocrStore" placeholder="Contoh: Seicomart Sapporo / Daiso / AEON" />
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <button type="button" class="btn btn-secondary" onclick="runSmartOCR(true)">🔍 Proses Ulang OCR</button>
-              <button type="button" class="btn btn-green" onclick="applyOCRToForm(true)">✓ Terapkan & Hapus Foto</button>
+              <button type="button" class="btn btn-secondary" onclick="runOfflineOCR()">🔍 Proses & Format EN</button>
+              <button type="button" class="btn btn-green" onclick="applyOCRToForm()">✓ Masukkan & Hapus Foto</button>
             </div>
-            <textarea id="ocrFormattedPreview" class="hidden" style="margin-top:8px;" placeholder="Hasil rincian item, diskon & total..."></textarea>
+            <textarea id="ocrFormattedPreview" class="hidden" style="margin-top:8px;" placeholder="Hasil format Brand - Product Type - Store (English)..."></textarea>
           </div>
 
           <div class="form-group" id="groupCategory">
             <label for="fCategory">Kategori</label>
-            <input type="text" id="fCategory" placeholder="Contoh: Groceries & Personal Care, Makanan" oninput="handleCategoryTyped()" required />
+            <input type="text" id="fCategory" placeholder="Contoh: Makanan, Belanja Bulanan, Kartu Kredit" oninput="handleCategoryTyped()" required />
           </div>
 
           <div class="form-group" id="groupSource">
@@ -884,7 +868,7 @@
           </div>
 
           <div class="form-group">
-            <label for="fAmount" id="labelAmount">Nominal (Total Otomatis dari Struk / Input)</label>
+            <label for="fAmount" id="labelAmount">Nominal (atau Nominal per Cicilan jika > 1 bulan)</label>
             <input type="number" step="any" id="fAmount" placeholder="0" required />
           </div>
 
@@ -904,7 +888,7 @@
           </div>
 
           <div class="form-group hidden" id="groupDueDate">
-            <label for="fDueDate">Tanggal Pelunasan Pertama / Auto-Debit</label>
+            <label for="fDueDate">Tanggal Pelunasan Pertama / Auto-Debit (saldo terpotong & tercatat sebagai Expense saat tanggal ini)</label>
             <input type="date" id="fDueDate" />
           </div>
 
@@ -914,8 +898,8 @@
           </div>
 
           <div class="form-group" id="groupItems">
-            <label for="fItems">Item Stok / Belanjaan</label>
-            <textarea id="fItems" placeholder="Hasil OCR atau daftar barang belanja..." oninput="runSmartSuggestFromInputs(false)"></textarea>
+            <label for="fItems">Item Stok / Belanjaan (Brand - Product Type - Store)</label>
+            <textarea id="fItems" placeholder="Contoh: Blendy - Instant Coffee Latte - Seicomart Sapporo" oninput="runSmartSuggestFromInputs(false)"></textarea>
           </div>
 
           <button type="submit" class="btn" id="submitBtn">Simpan Transaksi</button>
@@ -929,7 +913,7 @@
         <form onsubmit="handleAssetSubmit(event)">
           <div class="form-group">
             <label for="aName">Nama Aset</label>
-            <input type="text" id="aName" placeholder="Contoh: PayPay / Cash JPY, BLU BCA, Gaji" required />
+            <input type="text" id="aName" placeholder="Contoh: BLU BCA, Gaji, BIBIT" required />
           </div>
           <div class="form-group">
             <label for="aCurr">Mata Uang Aset</label>
@@ -979,7 +963,7 @@
         <button class="icon-btn" onclick="closeBudgetModal()">✕</button>
       </div>
       <p class="asset-meta" style="margin-top:0;margin-bottom:10px;">
-        Nominal disimpan dalam mata uang tampilan aktif (<strong id="budgetCurrHint">IDR</strong>).
+        Nominal disimpan dalam mata uang tampilan aktif (<strong id="budgetCurrHint">IDR</strong>) dan otomatis menyesuaikan saat kurs/mata uang diganti.
       </p>
       <div class="form-group">
         <label for="bDaily">Batas Expense Harian</label>
@@ -1090,7 +1074,7 @@
         <button class="icon-btn" onclick="closeSyncModal()">✕</button>
       </div>
       <p class="asset-meta" style="margin-top:0;margin-bottom:10px;">
-        Hubungkan ke URL Web App Google Apps Script milikmu agar data tersinkron ke Google Sheets.
+        Hubungkan ke URL Web App Google Apps Script milikmu agar data tersinkron ke Google Sheets. Saat offline, data tetap aman di perangkat lalu bisa di-sync kapan saja.
       </p>
       <div class="form-group">
         <label for="syncUrl">URL Web App Google Apps Script</label>
@@ -1121,15 +1105,65 @@
   </nav>
 
   <script>
-    const STORAGE_KEY = 'money_x_pro_state_v13';
+    const STORAGE_KEY = 'money_x_pro_state_v12';
     const CURRENCIES = ['IDR', 'JPY', 'USD'];
 
     const THEME_PRESETS = {
-      emeraldSlate: { name: '1. Emerald Slate', desc: 'Abu tua modern + hijau segar + teks putih', bg: '#0d1118', surface: '#151b26', surface2: '#1d2534', border: '#2b364b', text: '#f8fafc', muted: '#94a3b8', accent: '#10b981' },
-      forestCarbon: { name: '2. Forest Carbon', desc: 'Arang modern + hijau zamrud tajam', bg: '#0e1311', surface: '#151d1a', surface2: '#1d2824', border: '#2c3d37', text: '#f8fafc', muted: '#94a3b8', accent: '#22c55e' },
-      steelCobalt: { name: '3. Steel Cobalt', desc: 'Abu baja modern + biru elektrik', bg: '#0e121a', surface: '#151c28', surface2: '#1d2738', border: '#2d3b54', text: '#f8fafc', muted: '#94a3b8', accent: '#3b82f6' },
-      graphiteAmber: { name: '4. Graphite Amber', desc: 'Abu grafit hangat + aksen amber', bg: '#12110f', surface: '#1b1a17', surface2: '#25231f', border: '#38342e', text: '#f8fafc', muted: '#a1a1aa', accent: '#f59e0b' },
-      obsidianCyan: { name: '5. Obsidian Cyan', desc: 'Abu gelap modern + aksen cyan bersih', bg: '#0b1217', surface: '#121c24', surface2: '#192732', border: '#273b4b', text: '#f8fafc', muted: '#94a3b8', accent: '#06b6d4' }
+      emeraldSlate: {
+        name: '1. Emerald Slate',
+        desc: 'Abu tua modern + hijau segar + teks putih',
+        bg: '#0d1118',
+        surface: '#151b26',
+        surface2: '#1d2534',
+        border: '#2b364b',
+        text: '#f8fafc',
+        muted: '#94a3b8',
+        accent: '#10b981'
+      },
+      forestCarbon: {
+        name: '2. Forest Carbon',
+        desc: 'Arang modern + hijau zamrud tajam',
+        bg: '#0e1311',
+        surface: '#151d1a',
+        surface2: '#1d2824',
+        border: '#2c3d37',
+        text: '#f8fafc',
+        muted: '#94a3b8',
+        accent: '#22c55e'
+      },
+      steelCobalt: {
+        name: '3. Steel Cobalt',
+        desc: 'Abu baja modern + biru elektrik',
+        bg: '#0e121a',
+        surface: '#151c28',
+        surface2: '#1d2738',
+        border: '#2d3b54',
+        text: '#f8fafc',
+        muted: '#94a3b8',
+        accent: '#3b82f6'
+      },
+      graphiteAmber: {
+        name: '4. Graphite Amber',
+        desc: 'Abu grafit hangat + aksen amber',
+        bg: '#12110f',
+        surface: '#1b1a17',
+        surface2: '#25231f',
+        border: '#38342e',
+        text: '#f8fafc',
+        muted: '#a1a1aa',
+        accent: '#f59e0b'
+      },
+      obsidianCyan: {
+        name: '5. Obsidian Cyan',
+        desc: 'Abu gelap modern + aksen cyan bersih',
+        bg: '#0b1217',
+        surface: '#121c24',
+        surface2: '#192732',
+        border: '#273b4b',
+        text: '#f8fafc',
+        muted: '#94a3b8',
+        accent: '#06b6d4'
+      }
     };
 
     const RADIUS_MAP = {
@@ -1141,12 +1175,30 @@
     const DEFAULT_STATE = {
       displayCurrency: 'IDR',
       privacyMask: false,
-      budgets: { currency: 'IDR', daily: 0, monthly: 0 },
-      backupMeta: { lastJsonAt: null, lastCsvAt: null, lastCloudAt: null, reminderDays: 7, locked: false },
-      ocrConfig: { mode: 'smart', cloudUrl: '' },
+      budgets: {
+        currency: 'IDR',
+        daily: 0,
+        monthly: 0
+      },
+      backupMeta: {
+        lastJsonAt: null,
+        lastCsvAt: null,
+        lastCloudAt: null,
+        reminderDays: 7,
+        locked: false
+      },
       savedViews: [],
-      theme: { preset: 'emeraldSlate', accent: '#10b981', surface: '#151b26', radiusStyle: 'modern' },
-      interactiveFx: { motion: true, quickPop: true, peekHaptic: true },
+      theme: {
+        preset: 'emeraldSlate',
+        accent: '#10b981',
+        surface: '#151b26',
+        radiusStyle: 'modern'
+      },
+      interactiveFx: {
+        motion: true,
+        quickPop: true,
+        peekHaptic: true
+      },
       ratesToIDR: { IDR: 1, JPY: 114, USD: 18000 },
       rateMeta: { mode: 'auto', updatedAt: null },
       syncUrl: '',
@@ -1166,37 +1218,44 @@
     const KEYWORD_CATEGORY_RULES = [
       { re: /gaji|salary|bonus|upah|lembur|payroll|給与|給料/i, category: 'Gaji / Pemasukan', type: 'Income' },
       { re: /cicilan|hutang|kredit|auto-?debit|paylater|pinjaman|installment/i, category: 'Auto-Debit Tagihan', type: 'Liability' },
-      { re: /shaving|シェービング|soap|sabun|shampoo|detergen|tisu|satudora|サツドラ|daiso|aeon|groceries/i, category: 'Groceries & Personal Care', type: 'Expense' },
-      { re: /makan|nasi|bento|ramen|lunch|dinner|sarapan|beras|telur|ayam|daging|sayur|roti|mie|ご飯|弁当|ラーメン|野菜|肉|卵|そば/i, category: 'Makanan', type: 'Expense' },
-      { re: /kopi|coffee|latte|latory|カフェラトリ|teh|tea|minum|air mineral|susu|milk|珈琲|コーヒー|ラテ|お茶|水/i, category: 'Kopi & Minuman', type: 'Expense' },
+      { re: /makan|nasi|bento|ramen|lunch|dinner|sarapan|beras|telur|ayam|daging|sayur|roti|mie|ご飯|弁当|ラーメン|野菜|肉|卵/i, category: 'Makanan', type: 'Expense' },
+      { re: /kopi|coffee|latte|teh|tea|minum|air mineral|susu|milk|珈琲|コーヒー|ラテ|お茶|水/i, category: 'Kopi & Minuman', type: 'Expense' },
       { re: /kereta|bus|train|subway|icoca|suica|pasmo|transport|bensin|parkir|tiket|電車|バス|交通/i, category: 'Transportasi', type: 'Expense' },
-      { re: /listrik|air|gas|internet|wifi|pulsa|kuota|tagihan|sewa|rent|電気|水道|ガス|通信/i, category: 'Utilitas & Tagihan', type: 'Expense' }
+      { re: /listrik|air|gas|internet|wifi|pulsa|kuota|tagihan|sewa|rent|電気|水道|ガス|通信/i, category: 'Utilitas & Tagihan', type: 'Expense' },
+      { re: /sabun|detergen|tisu|shampoo|daiso|aeon|seicomart|lawson|familymart|7-eleven|belanja|stok/i, category: 'Belanja Bulanan', type: 'Expense' }
     ];
 
-    const JP_PRODUCT_PHRASES = [
-      ['サツドラ', 'Satudora'],
-      ['カフェラトリ', 'Cafe Latory'],
-      ['薬用シェービング', 'Medicated Shaving'],
-      ['シェービング', 'Shaving'],
-      ['きたほなみ', 'Kitahonami'],
-      ['みのりそば', 'Minorisoba'],
-      ['マルナカ', 'Marunaka'],
-      ['割引', 'Discount'],
-      ['コーヒー', 'Coffee'],
-      ['ラテ', 'Latte'],
-      ['牛乳', 'Milk'],
-      ['卵', 'Eggs'],
-      ['パン', 'Bread'],
-      ['そば', 'Soba']
+    const OFFLINE_EN_DICT = {
+      '米': 'Rice', 'ごはん': 'Cooked Rice', '卵': 'Eggs', 'たまご': 'Eggs',
+      '鶏肉': 'Chicken', '鶏': 'Chicken', '牛肉': 'Beef', '牛': 'Beef',
+      '豚肉': 'Pork', '魚': 'Fish', '野菜': 'Vegetables', '牛乳': 'Milk',
+      'パン': 'Bread', 'コーヒー': 'Coffee', '珈琲': 'Coffee', 'ラテ': 'Latte',
+      '茶': 'Tea', '水': 'Water', '塩': 'Salt', '醤油': 'Soy Sauce',
+      '砂糖': 'Sugar', '油': 'Oil', '味噌': 'Miso', '麺': 'Noodles',
+      'ラーメン': 'Ramen', '弁当': 'Bento Meal', 'おにぎり': 'Onigiri Rice Ball',
+      '缶詰': 'Canned Food', '洗剤': 'Detergent', 'ティッシュ': 'Tissue',
+      'シャンプー': 'Shampoo', 'エビペースト': 'Shrimp Paste',
+      'beras': 'Rice', 'telur': 'Eggs', 'ayam': 'Chicken', 'daging': 'Meat',
+      'sapi': 'Beef', 'babi': 'Pork', 'ikan': 'Fish', 'sayur': 'Vegetables',
+      'sayuran': 'Vegetables', 'garam': 'Salt', 'gula': 'Sugar', 'minyak': 'Oil',
+      'kopi': 'Coffee', 'susu': 'Milk', 'roti': 'Bread', 'mie': 'Noodles',
+      'kaldu': 'Bouillon', 'terasi': 'Shrimp Paste'
+    };
+
+    const KNOWN_BRANDS = [
+      'BLENDY', 'AGF', 'TORA MOKA', 'TORAMOKA', 'GOLDA', 'POINT COFFEE',
+      'ROYCO', 'CAP DOLPHIN', 'DOLPHIN', 'DAISO', 'SEICOMART', 'SEVEN',
+      '7-ELEVEN', 'LAWSON', 'FAMILYMART', 'AEON', 'DONKI', 'DON QUIJOTE',
+      'SANYO', 'CEMEDINE', 'NESTLE', 'NESCAFE', 'KIRIN', 'ASAHI',
+      'SUNTORY', 'MEIJI', 'MORINAGA', 'AJINOMOTO', 'KIKKOMAN', 'NISSIN',
+      'MARUCHAN', 'INDOMIE', 'BIMOLI'
     ];
 
     let state = loadState();
     let activePeriod = 'ALL';
     let tempPhotoUrl = null;
-    let processedCanvasDataUrl = null;
-    let parsedFormattedLines = [];
+    let parsedFormattedItems = [];
     let parsedOcrAmount = null;
-    let parsedOcrCurrency = null;
     let quickParseDraft = null;
     let categoryManuallyEdited = false;
 
@@ -1215,11 +1274,14 @@
       const catScores = {};
       const typeScores = {};
 
+      // 1. Skor dari riwayat transaksi pengguna
       if (tokens.length > 0) {
         state.transactions.forEach(tx => {
           const hay = `${tx.category || ''} ${tx.note || ''}`.toLowerCase();
           let hits = 0;
-          tokens.forEach(tok => { if (hay.includes(tok)) hits++; });
+          tokens.forEach(tok => {
+            if (hay.includes(tok)) hits++;
+          });
           if (hits > 0 && tx.category) {
             catScores[tx.category] = (catScores[tx.category] || 0) + hits * 3;
             if (tx.type) typeScores[tx.type] = (typeScores[tx.type] || 0) + hits * 2;
@@ -1227,6 +1289,7 @@
         });
       }
 
+      // 2. Skor dari aturan kata kunci ID / JP / EN
       KEYWORD_CATEGORY_RULES.forEach(rule => {
         if (rule.re.test(combined)) {
           catScores[rule.category] = (catScores[rule.category] || 0) + 4;
@@ -1245,6 +1308,7 @@
 
       const bestType = Object.entries(typeScores).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
 
+      // 3. Saran Akun Sumber & Mata Uang paling sering dipakai pada kategori tersebut
       let suggestedAssetId = '';
       let suggestedCurrency = '';
       if (bestCategory) {
@@ -1260,13 +1324,21 @@
         suggestedCurrency = Object.entries(currFreq).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
       }
 
+      // 4. Saran item stok dari logbook yang cocok
       const matchingStocks = tokens.length > 0
         ? state.groceries
             .filter(g => tokens.some(tok => (g.name || '').toLowerCase().includes(tok)))
             .slice(0, 3)
         : [];
 
-      return { topCategories, bestCategory, bestType, suggestedAssetId, suggestedCurrency, matchingStocks };
+      return {
+        topCategories,
+        bestCategory,
+        bestType,
+        suggestedAssetId,
+        suggestedCurrency,
+        matchingStocks
+      };
     }
 
     function handleCategoryTyped() {
@@ -1302,10 +1374,10 @@
 
     function appendSuggestedStockItem(itemName) {
       const box = document.getElementById('fItems');
-      const existing = box.value.split('\n').map(s => s.trim()).filter(Boolean);
+      const existing = box.value.split(',').map(s => s.trim()).filter(Boolean);
       if (!existing.some(x => x.toLowerCase() === itemName.toLowerCase())) {
         existing.push(itemName);
-        box.value = existing.join('\n');
+        box.value = existing.join(', ');
       }
       triggerHaptic(8);
       showToast(`Ditambahkan ke rincian item: ${itemName}`);
@@ -1325,21 +1397,26 @@
       const combinedText = `${note} ${items}`.trim();
       const sug = inferSmartSuggestion(combinedText, currentCat);
 
+      // Auto-isi kategori jika belum diisi manual dan ada saran kuat
       if ((forceAutoFill || !categoryManuallyEdited) && !currentCat && sug.topCategories.length > 0 && combinedText.length >= 2) {
         document.getElementById('fCategory').value = sug.topCategories[0];
       }
 
       const chips = [];
+
+      // Chip saran kategori
       sug.topCategories.forEach(cat => {
         if (cat.toLowerCase() !== (document.getElementById('fCategory').value || '').trim().toLowerCase()) {
           chips.push(`<button type="button" class="chip-btn" onclick="applySuggestedCategory('${escapeHtml(cat).replace(/'/g, "\\'")}')">Kategori: ${escapeHtml(cat)}</button>`);
         }
       });
 
+      // Chip saran tipe transaksi
       if (sug.bestType && sug.bestType !== currentType && combinedText.length >= 3) {
         chips.push(`<button type="button" class="chip-btn" onclick="applySuggestedTxType('${sug.bestType}')">Ubah Tipe → ${sug.bestType}</button>`);
       }
 
+      // Chip saran akun & mata uang berdasarkan riwayat kategori
       if (sug.suggestedAssetId) {
         const assetObj = state.assets.find(a => a.id === sug.suggestedAssetId);
         const targetCurr = sug.suggestedCurrency || assetObj?.currency || currentCurr;
@@ -1348,6 +1425,7 @@
         }
       }
 
+      // Chip saran item stok serupa
       if (currentType === 'Expense' && sug.matchingStocks.length > 0) {
         sug.matchingStocks.forEach(st => {
           chips.push(`<button type="button" class="chip-btn" onclick="appendSuggestedStockItem('${escapeHtml(st.name).replace(/'/g, "\\'")}')">+ Stok: ${escapeHtml(st.name)} (Sisa ${st.stock})</button>`);
@@ -1371,11 +1449,22 @@
       const bar = document.getElementById('directStockSuggestBar');
       const q = (document.getElementById('sName')?.value || '').toLowerCase().trim();
       if (!bar || q.length < 2) {
-        if (bar) { bar.classList.add('hidden'); bar.innerHTML = ''; }
+        if (bar) {
+          bar.classList.add('hidden');
+          bar.innerHTML = '';
+        }
         return;
       }
-      const matches = state.groceries.filter(g => (g.name || '').toLowerCase().includes(q)).slice(0, 4);
-      if (!matches.length) { bar.classList.add('hidden'); bar.innerHTML = ''; return; }
+      const matches = state.groceries
+        .filter(g => (g.name || '').toLowerCase().includes(q))
+        .slice(0, 4);
+
+      if (!matches.length) {
+        bar.classList.add('hidden');
+        bar.innerHTML = '';
+        return;
+      }
+
       bar.classList.remove('hidden');
       bar.innerHTML = matches.map(m => `
         <button type="button" class="chip-btn" onclick="pickExistingStockTemplate('${escapeHtml(m.name).replace(/'/g, "\\'")}', ${Number(m.minStock) ?? 1})">
@@ -1470,18 +1559,26 @@
       const disp = state.displayCurrency;
       const bCurr = state.budgets?.currency || disp;
       document.getElementById('budgetCurrHint').textContent = disp;
-      document.getElementById('bDaily').value = state.budgets?.daily > 0 ? Math.round(convertCurrency(state.budgets.daily, bCurr, disp)) : '';
-      document.getElementById('bMonthly').value = state.budgets?.monthly > 0 ? Math.round(convertCurrency(state.budgets.monthly, bCurr, disp)) : '';
+      document.getElementById('bDaily').value = state.budgets?.daily > 0
+        ? Math.round(convertCurrency(state.budgets.daily, bCurr, disp))
+        : '';
+      document.getElementById('bMonthly').value = state.budgets?.monthly > 0
+        ? Math.round(convertCurrency(state.budgets.monthly, bCurr, disp))
+        : '';
       document.getElementById('budgetModal').classList.remove('hidden');
     }
 
-    function closeBudgetModal() { document.getElementById('budgetModal').classList.add('hidden'); }
+    function closeBudgetModal() {
+      document.getElementById('budgetModal').classList.add('hidden');
+    }
 
     function saveBudgetSettings() {
+      const daily = Math.max(0, Number(document.getElementById('bDaily').value) || 0);
+      const monthly = Math.max(0, Number(document.getElementById('bMonthly').value) || 0);
       state.budgets = {
         currency: state.displayCurrency,
-        daily: Math.max(0, Number(document.getElementById('bDaily').value) || 0),
-        monthly: Math.max(0, Number(document.getElementById('bMonthly').value) || 0)
+        daily,
+        monthly
       };
       saveState();
       closeBudgetModal();
@@ -1489,12 +1586,16 @@
       showToast('Batas budget harian & bulanan disimpan');
     }
 
+    // --- ON-DEMAND MODALS (RENDER SAAT DIBUKA SAJA) ---
     function closeOnDemandModal(id) {
       const el = document.getElementById(id);
       if (!el) return;
       el.classList.add('hidden');
-      if (id === 'onDemandStatusModal') document.getElementById('onDemandStatusBody').innerHTML = '';
-      else if (id === 'onDemandQuickParseModal') document.getElementById('onDemandQuickParseBody').innerHTML = '';
+      if (id === 'onDemandStatusModal') {
+        document.getElementById('onDemandStatusBody').innerHTML = '';
+      } else if (id === 'onDemandQuickParseModal') {
+        document.getElementById('onDemandQuickParseBody').innerHTML = '';
+      }
     }
 
     function getLastBackupTimestamp() {
@@ -1544,16 +1645,25 @@
     }
 
     function toggleBackupLock() {
-      state.backupMeta = { ...(state.backupMeta || DEFAULT_STATE.backupMeta), locked: !state.backupMeta?.locked };
+      state.backupMeta = {
+        ...(state.backupMeta || DEFAULT_STATE.backupMeta),
+        locked: !state.backupMeta?.locked
+      };
       saveState();
       openOnDemandStatusModal();
       showToast(state.backupMeta.locked ? 'Pengaturan pengingat di-lock' : 'Pengaturan pengingat dibuka');
     }
 
     function saveBackupReminderDays() {
-      if (state.backupMeta?.locked) { showToast('Pengaturan sedang di-lock'); return; }
+      if (state.backupMeta?.locked) {
+        showToast('Pengaturan sedang di-lock');
+        return;
+      }
       const val = Math.max(1, Math.min(90, Number(document.getElementById('odReminderDays')?.value) || 7));
-      state.backupMeta = { ...(state.backupMeta || DEFAULT_STATE.backupMeta), reminderDays: val };
+      state.backupMeta = {
+        ...(state.backupMeta || DEFAULT_STATE.backupMeta),
+        reminderDays: val
+      };
       saveState();
       renderAll();
       showToast(`Pengingat backup diatur tiap ${val} hari`);
@@ -1564,7 +1674,7 @@
       const body = document.getElementById('onDemandQuickParseBody');
       body.innerHTML = `
         <p class="asset-meta" style="margin-top:0;margin-bottom:10px;">
-          Tulis catatan bebas, contoh: <em>"makan siang 950 JPY di Seicomart"</em> atau <em>"gaji 227000 JPY"</em>.
+          Tulis catatan bebas, contoh: <em>"makan siang 950 JPY di Seicomart"</em> atau <em>"gaji 227000 JPY"</em>. Smart Suggest otomatis mendeteksi tipe, kategori, akun, dan mata uang.
         </p>
         <div class="form-group">
           <label for="qpRawText">Catatan Mentah</label>
@@ -1579,10 +1689,14 @@
 
     function parseRawTextDraft() {
       const raw = (document.getElementById('qpRawText')?.value || '').trim();
-      if (!raw) { showToast('Tulis catatan mentah dulu'); return; }
+      if (!raw) {
+        showToast('Tulis catatan mentah dulu');
+        return;
+      }
       const smart = inferSmartSuggestion(raw, '');
       const type = smart.bestType || 'Expense';
       const category = smart.topCategories[0] || (type === 'Income' ? 'Gaji / Pemasukan' : 'Lainnya');
+
       let currency = smart.suggestedCurrency || state.displayCurrency;
       if (/\bjpy\b|¥|yen/i.test(raw)) currency = 'JPY';
       else if (/\busd\b|\$/i.test(raw)) currency = 'USD';
@@ -1591,13 +1705,22 @@
       const numMatch = raw.match(/\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?/);
       let amount = 0;
       if (numMatch) {
-        amount = Number(numMatch[0].replace(/,/g, '')) || 0;
+        const cleaned = numMatch[0].replace(/,/g, '');
+        amount = Number(cleaned) || 0;
         if (/jt/i.test(raw) && amount < 1000) amount *= 1000000;
         else if (/ribu/i.test(raw) && amount < 1000) amount *= 1000;
       }
 
       const accName = state.assets.find(a => a.id === smart.suggestedAssetId)?.name || 'Default';
-      quickParseDraft = { type, category, currency, amount, note: raw, suggestedAssetId: smart.suggestedAssetId };
+      quickParseDraft = {
+        type,
+        category,
+        currency,
+        amount,
+        note: raw,
+        suggestedAssetId: smart.suggestedAssetId
+      };
+
       const box = document.getElementById('qpResultBox');
       box.innerHTML = `
         <div class="stat-label">Hasil Ekstrak + Smart Suggest</div>
@@ -1628,6 +1751,7 @@
       showToast('Draf cerdas masuk ke form input');
     }
 
+    // --- SAVED VIEWS ---
     function saveCurrentSavedView() {
       const name = prompt('Nama filter tersimpan (contoh: Expense JPY Bulan Ini):');
       if (!name || !name.trim()) return;
@@ -1672,7 +1796,11 @@
     function renderSavedViewsBar() {
       const bar = document.getElementById('savedViewsBar');
       const views = state.savedViews || [];
-      if (!views.length) { bar.classList.add('hidden'); bar.innerHTML = ''; return; }
+      if (!views.length) {
+        bar.classList.add('hidden');
+        bar.innerHTML = '';
+        return;
+      }
       bar.classList.remove('hidden');
       bar.innerHTML = views.map(v => `
         <span class="chip-btn" style="display:inline-flex;align-items:center;gap:6px;">
@@ -1682,6 +1810,7 @@
       `).join('');
     }
 
+    // --- DUPLICATE DETECTION ---
     function findDuplicateTransaction(type, currency, amount, date, editId) {
       const targetAmt = Number(amount) || 0;
       const d0 = new Date((date || todayISO()) + 'T00:00:00').getTime();
@@ -1690,7 +1819,8 @@
         if (t.type !== type || t.currency !== currency) return false;
         if (Math.abs((Number(t.amount) || 0) - targetAmt) > 0.0001) return false;
         const d1 = new Date((t.date || todayISO()) + 'T00:00:00').getTime();
-        return Math.abs(d0 - d1) / (1000 * 60 * 60 * 24) <= 1;
+        const diffDays = Math.abs(d0 - d1) / (1000 * 60 * 60 * 24);
+        return diffDays <= 1;
       });
     }
 
@@ -1731,7 +1861,8 @@
 
     function renderThemePresetList() {
       const activeKey = state.theme?.preset || 'emeraldSlate';
-      document.getElementById('themePresetList').innerHTML = Object.entries(THEME_PRESETS).map(([key, p]) => `
+      const el = document.getElementById('themePresetList');
+      el.innerHTML = Object.entries(THEME_PRESETS).map(([key, p]) => `
         <button type="button" class="theme-option ${key === activeKey ? 'active' : ''}" onclick="selectThemePreset('${key}')">
           <div>
             <div style="font-weight:700;font-size:13px;">${p.name}</div>
@@ -1749,7 +1880,12 @@
     function selectThemePreset(key) {
       const p = THEME_PRESETS[key];
       if (!p) return;
-      state.theme = { preset: key, accent: p.accent, surface: p.surface, radiusStyle: state.theme?.radiusStyle || 'modern' };
+      state.theme = {
+        preset: key,
+        accent: p.accent,
+        surface: p.surface,
+        radiusStyle: state.theme?.radiusStyle || 'modern'
+      };
       document.getElementById('customAccent').value = p.accent;
       document.getElementById('customSurface').value = p.surface;
       applyTheme(state.theme);
@@ -1757,12 +1893,13 @@
     }
 
     function previewCustomTheme() {
-      applyTheme({
+      const draft = {
         preset: state.theme?.preset || 'emeraldSlate',
         accent: document.getElementById('customAccent').value,
         surface: document.getElementById('customSurface').value,
         radiusStyle: document.getElementById('customRadius').value
-      });
+      };
+      applyTheme(draft);
     }
 
     function saveThemeSettings() {
@@ -1796,7 +1933,6 @@
         privacyMask: Boolean(parsed.privacyMask),
         budgets: { ...base.budgets, ...(parsed.budgets || {}) },
         backupMeta: { ...base.backupMeta, ...(parsed.backupMeta || {}) },
-        ocrConfig: { ...base.ocrConfig, ...(parsed.ocrConfig || {}) },
         savedViews: Array.isArray(parsed.savedViews) ? parsed.savedViews : [],
         theme: { ...base.theme, ...(parsed.theme || {}) },
         interactiveFx: { ...base.interactiveFx, ...(parsed.interactiveFx || {}) },
@@ -1816,9 +1952,13 @@
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY)
-          || localStorage.getItem('money_x_pro_state_v12')
           || localStorage.getItem('money_x_pro_state_v11')
-          || localStorage.getItem('money_x_pro_state_v10');
+          || localStorage.getItem('money_x_pro_state_v10')
+          || localStorage.getItem('money_x_pro_state_v9')
+          || localStorage.getItem('money_x_pro_state_v8')
+          || localStorage.getItem('money_x_pro_state_v7')
+          || localStorage.getItem('money_x_pro_state_v6')
+          || localStorage.getItem('money_x_pro_state_v5');
         if (!raw) return structuredClone(DEFAULT_STATE);
         return normalizeImportedState(JSON.parse(raw));
       } catch {
@@ -1826,7 +1966,9 @@
       }
     }
 
-    function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
 
     function showToast(msg) {
       const el = document.getElementById('toast');
@@ -1836,160 +1978,346 @@
       window.__toastTimer = setTimeout(() => el.classList.add('hidden'), 2600);
     }
 
-    function syncOcrConfigInputs() {
-      const cfg = state.ocrConfig || DEFAULT_STATE.ocrConfig;
-      const modeEl = document.getElementById('ocrEngineMode');
-      const urlEl = document.getElementById('ocrCloudUrl');
-      if (modeEl) modeEl.value = cfg.mode || 'smart';
-      if (urlEl) urlEl.value = cfg.cloudUrl || '';
+    async function fetchOnlineRates(forceUserAction = false) {
+      if (!forceUserAction && state.rateMeta && state.rateMeta.mode === 'manual') {
+        renderAll();
+        return;
+      }
+      if (!navigator.onLine) {
+        if (forceUserAction) showToast('Sedang offline — memakai kurs tersimpan');
+        renderAll();
+        return;
+      }
+
+      const endpoints = [
+        async () => {
+          const r = await fetch('https://open.er-api.com/v6/latest/USD', { cache: 'no-store' });
+          if (!r.ok) throw new Error('er-api');
+          const d = await r.json();
+          const idrPerUsd = Number(d?.rates?.IDR);
+          const idrPerJpy = d?.rates?.JPY ? idrPerUsd / Number(d.rates.JPY) : NaN;
+          return { usdToIdr: Math.round(idrPerUsd), jpyToIdr: Number(idrPerJpy.toFixed(2)) };
+        },
+        async () => {
+          const r = await fetch('https://api.frankfurter.app/latest?from=USD&to=IDR,JPY', { cache: 'no-store' });
+          if (!r.ok) throw new Error('frankfurter');
+          const d = await r.json();
+          const idrPerUsd = Number(d?.rates?.IDR);
+          const jpyPerUsd = Number(d?.rates?.JPY);
+          const idrPerJpy = idrPerUsd && jpyPerUsd ? idrPerUsd / jpyPerUsd : NaN;
+          return { usdToIdr: Math.round(idrPerUsd), jpyToIdr: Number(idrPerJpy.toFixed(2)) };
+        }
+      ];
+
+      for (const loader of endpoints) {
+        try {
+          const { usdToIdr, jpyToIdr } = await loader();
+          if (Number.isFinite(usdToIdr) && usdToIdr > 0 && Number.isFinite(jpyToIdr) && jpyToIdr > 0) {
+            state.ratesToIDR.USD = usdToIdr;
+            state.ratesToIDR.JPY = jpyToIdr;
+            state.rateMeta = {
+              mode: 'auto',
+              updatedAt: new Date().toLocaleString('id-ID', {
+                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+              })
+            };
+            saveState();
+            const rUsd = document.getElementById('rUsd');
+            const rJpy = document.getElementById('rJpy');
+            if (rUsd) rUsd.value = state.ratesToIDR.USD;
+            if (rJpy) rJpy.value = state.ratesToIDR.JPY;
+            renderAll();
+            if (forceUserAction) showToast(`Kurs online diperbarui (1 USD ≈ ${usdToIdr.toLocaleString('id-ID')} IDR)`);
+            return;
+          }
+        } catch {}
+      }
+
+      if (forceUserAction) showToast('Gagal ambil kurs online — cek koneksi/pemblokir');
+      renderAll();
     }
 
-    function saveOcrEndpoint() {
-      state.ocrConfig = {
-        mode: document.getElementById('ocrEngineMode')?.value || 'smart',
-        cloudUrl: (document.getElementById('ocrCloudUrl')?.value || '').trim()
-      };
+    function convertCurrency(amount, fromCurr, toCurr) {
+      const num = Number(amount) || 0;
+      const fromRate = state.ratesToIDR[fromCurr] || 1;
+      const toRate = state.ratesToIDR[toCurr] || 1;
+      return (num * fromRate) / toRate;
+    }
+
+    function formatMoney(amount, curr = state.displayCurrency) {
+      if (state.privacyMask) return '••••••';
+      const val = Number(amount) || 0;
+      if (curr === 'IDR') return 'Rp ' + Math.round(val).toLocaleString('id-ID');
+      if (curr === 'JPY') return '¥' + Math.round(val).toLocaleString('en-US');
+      return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function cycleCurrency(step) {
+      const idx = CURRENCIES.indexOf(state.displayCurrency);
+      state.displayCurrency = CURRENCIES[(idx + step + CURRENCIES.length) % CURRENCIES.length];
       saveState();
+      renderAll();
+      pulseTotalPop();
+      triggerHaptic(10);
     }
 
-    async function preprocessImageForOCR(imgSrc) {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => {
-          const scale = img.width < 1200 ? Math.min(2.2, 1400 / Math.max(1, img.width)) : 1.25;
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          const ctx = canvas.getContext('2d');
-          ctx.filter = 'grayscale(100%) contrast(155%) brightness(106%)';
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/png'));
-        };
-        img.onerror = () => resolve(imgSrc);
-        img.src = imgSrc;
+    function switchTab(tab) {
+      ['dashboard', 'general', 'input'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
+        document.getElementById('nav-' + t).classList.toggle('active', t === tab);
+      });
+      triggerHaptic(8);
+      renderAll();
+    }
+
+    function todayISO() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function shiftISO(baseDateStr, daysOffset) {
+      const d = new Date((baseDateStr || todayISO()) + 'T00:00:00');
+      d.setDate(d.getDate() + daysOffset);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function currentMonthPrefix() { return todayISO().slice(0, 7); }
+
+    function prevCalendarMonthPrefix() {
+      const now = new Date();
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function nextMonthOffsetISO(baseDateStr, monthOffset = 1) {
+      const base = new Date((baseDateStr || todayISO()) + 'T00:00:00');
+      const target = new Date(base.getFullYear(), base.getMonth() + monthOffset, base.getDate());
+      const yyyy = target.getFullYear();
+      const mm = String(target.getMonth() + 1).padStart(2, '0');
+      const dd = String(target.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function nextCalendarMonthPrefix() {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function setQuickPeriod(period) {
+      activePeriod = period;
+      const today = todayISO();
+      const fromEl = document.getElementById('dateFrom');
+      const toEl = document.getElementById('dateTo');
+
+      if (period === 'ALL') {
+        fromEl.value = '';
+        toEl.value = '';
+      } else if (period === 'TODAY') {
+        fromEl.value = today;
+        toEl.value = today;
+      } else if (period === '7D') {
+        fromEl.value = shiftISO(today, -6);
+        toEl.value = today;
+      } else if (period === 'MONTH') {
+        fromEl.value = `${today.slice(0, 7)}-01`;
+        toEl.value = today;
+      }
+
+      syncPeriodButtons();
+      triggerHaptic(8);
+      renderAll();
+    }
+
+    function markCustomDateRange() {
+      activePeriod = 'CUSTOM';
+      syncPeriodButtons();
+    }
+
+    function syncPeriodButtons() {
+      ['ALL', 'TODAY', '7D', 'MONTH'].forEach(p => {
+        document.getElementById('period-' + p)?.classList.toggle('active', activePeriod === p);
       });
     }
 
-    async function runCloudOCRIfConfigured(dataUrl) {
-      const cfg = state.ocrConfig || DEFAULT_STATE.ocrConfig;
-      const url = (document.getElementById('ocrCloudUrl')?.value || cfg.cloudUrl || '').trim();
-      if (!url || !navigator.onLine) return null;
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'ocr', imageBase64: dataUrl })
-        });
-        if (!res.ok) return null;
-        const json = await res.json();
-        const text = json?.text || json?.result?.text || '';
-        return typeof text === 'string' && text.trim() ? text.trim() : null;
-      } catch {
-        return null;
+    function processDueAutoDebits(silent = true) {
+      const today = todayISO();
+      let settledCount = 0;
+
+      state.transactions.forEach(tx => {
+        if (tx.type === 'Liability' && tx.status !== 'Paid') {
+          const dueDate = tx.dueDate || tx.date;
+          if (dueDate <= today) {
+            settleLiabilityItem(tx, true);
+            settledCount++;
+          }
+        }
+      });
+
+      if (settledCount > 0) {
+        saveState();
+        if (!silent) {
+          showToast(`${settledCount} auto-debit jatuh tempo diproses ke Expense`);
+        }
       }
     }
 
-    function cleanJpProductLabel(rawLine) {
-      let s = String(rawLine || '')
-        .replace(/[◇★■◆●▶▼▲]/g, ' ')
-        .replace(/特\s*¥?\d+内?|¥\d+内?|\(\s*\d+%.*?\)|-\s*\d+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+    function settleLiabilityItem(tx, skipSave = false) {
+      if (!tx || tx.type !== 'Liability' || tx.status === 'Paid') return;
+      const settleDate = tx.dueDate || todayISO();
+      const srcName = state.assets.find(a => a.id === tx.sourceAssetId)?.name || 'Akun';
 
-      for (const [jp, en] of JP_PRODUCT_PHRASES) {
-        s = s.replaceAll(jp, ` ${en} `);
+      const expenseTx = {
+        id: 'TX-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+        type: 'Expense',
+        category: tx.category || 'Auto-Debit Hutang',
+        sourceAssetId: tx.sourceAssetId,
+        targetAssetId: '',
+        currency: tx.currency,
+        amount: Number(tx.amount) || 0,
+        targetAmount: null,
+        date: settleDate,
+        note: `Auto-Debit Pelunasan (${srcName})${tx.note ? ' · ' + tx.note : ''}`,
+        linkedLiabilityId: tx.id
+      };
+
+      applyTransactionEffect(expenseTx, 1);
+      tx.status = 'Paid';
+      tx.paidDate = todayISO();
+      tx.expenseTxId = expenseTx.id;
+      state.transactions.unshift(expenseTx);
+
+      if (!skipSave) {
+        saveState();
+        renderAll();
+        pulseTotalPop();
+        showToast('Hutang dilunasi & tercatat sebagai Expense');
       }
-
-      s = s.replace(/\s+/g, ' ').trim();
-      if (/^AGF.*Latory/i.test(s) || /Cafe Latory/i.test(s)) return 'AGF Cafe Latory S';
-      if (/VEXY.*Shaving|Shaving/i.test(s)) return 'VEXY Medicated Shaving';
-      if (/Kitahonami/i.test(s)) return 'Marunaka Kitahonami';
-      if (/Minorisoba/i.test(s)) return 'Marunaka Minorisoba';
-      return s;
     }
 
-    function parseReceiptLinesStructured(rawText, storeHint = '') {
-      const lines = String(rawText || '').split('\n').map(l => l.trim()).filter(Boolean);
-      const hasYen = /¥|円|サツドラ|satudora|合計|小計/i.test(rawText);
-      const currency = hasYen ? 'JPY' : state.displayCurrency;
+    function revertLiabilitySettlement(id) {
+      const tx = state.transactions.find(t => t.id === id);
+      if (!tx || tx.type !== 'Liability' || tx.status !== 'Paid') return;
+      if (!confirm('Batalkan pelunasan auto-debit ini dan kembalikan saldo akun?')) return;
 
-      // Deteksi nama toko
-      let store = (storeHint || '').trim();
-      if (!store) {
-        if (/サツドラ|satudora|sapporo drug/i.test(rawText)) store = 'Satudora';
-        else {
-          const firstStoreLine = lines.find(l => l.length >= 2 && !/tel|011-|本社|登録番号|領収|202\d/i.test(l));
-          store = firstStoreLine ? cleanJpProductLabel(firstStoreLine) : 'Store';
+      const expIdx = state.transactions.findIndex(t =>
+        (tx.expenseTxId && t.id === tx.expenseTxId) || t.linkedLiabilityId === tx.id
+      );
+      if (expIdx !== -1) {
+        applyTransactionEffect(state.transactions[expIdx], -1);
+        state.transactions.splice(expIdx, 1);
+      } else {
+        const src = state.assets.find(a => a.id === tx.sourceAssetId);
+        if (src) {
+          src.balance = (Number(src.balance) || 0) + convertCurrency(Number(tx.amount) || 0, tx.currency, src.currency);
         }
       }
 
-      // Deteksi total akhir dari baris 合計 / 請求 / 支払
-      let totalAmount = 0;
-      for (const line of lines) {
-        if (/合計|請求|支払|total/i.test(line) && !/小計|対象額|内税額/i.test(line)) {
-          const m = line.match(/(\d{1,3}(?:,\d{3})+|\d+)/g);
-          if (m && m.length) {
-            totalAmount = Number(m[m.length - 1].replace(/,/g, '')) || 0;
-            if (totalAmount > 0) break;
-          }
-        }
-      }
-      if (!totalAmount) {
-        const allNums = [];
-        lines.forEach(line => {
-          if (/tel|011-|202\d|no\.\s*\d+|担当|登録/i.test(line)) return;
-          const m = line.match(/\d{1,3}(?:,\d{3})+|\d+/g);
-          if (m) m.forEach(x => {
-            const n = Number(x.replace(/,/g, ''));
-            if (n > 0 && n < 5000000) allNums.push(n);
-          });
-        });
-        if (allNums.length) totalAmount = Math.max(...allNums);
-      }
+      tx.status = 'Pending';
+      delete tx.paidDate;
+      delete tx.expenseTxId;
 
-      // Parsing item & diskon per baris
-      const formattedLines = [];
-      let lastItemLabel = '';
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (/tel|011-|本社|登録番号|領収|202\d|担当|小計|内税|対象額|合計|クレジット|お釣り|---/i.test(line)) {
-          continue;
-        }
-
-        const priceMatch = line.match(/¥\s*(\d{1,3}(?:,\d{3})+|\d+)/);
-        const discountMatch = line.match(/割引|値引き|discount/i) || line.match(/^\s*-\s*(\d+)\s*$/);
-
-        if (discountMatch) {
-          const discNumMatch = line.match(/-?\s*(\d+)/) || (lines[i + 1] && lines[i + 1].match(/^\s*-?\s*(\d+)\s*$/));
-          const discAmt = discNumMatch ? Math.abs(Number(discNumMatch[1])) : 0;
-          const discTitle = /bf割引/i.test(line) ? 'BF Discount' : 'Discount';
-          if (discAmt > 0) {
-            formattedLines.push(`${discTitle} - ¥${discAmt}`);
-          }
-          continue;
-        }
-
-        if (priceMatch || /[◇★]/.test(line)) {
-          const cleanedName = cleanJpProductLabel(line);
-          if (cleanedName && cleanedName.length >= 2) {
-            const unitPrice = priceMatch ? ` (¥${Number(priceMatch[1].replace(/,/g, ''))})` : '';
-            const fullLine = `${cleanedName} - ${store}${unitPrice}`;
-            formattedLines.push(fullLine);
-            lastItemLabel = cleanedName;
-          }
-        }
-      }
-
-      if (totalAmount > 0) {
-        formattedLines.push(`Total - ¥${totalAmount}`);
-      }
-
-      return { store, totalAmount, currency, formattedLines, lastItemLabel };
+      saveState();
+      renderAll();
+      pulseTotalPop();
+      showToast('Auto-debit dibatalkan & saldo dikembalikan');
     }
 
-    async function handleReceiptPicked(event) {
+    function openQuickForm(type) {
+      if (type === 'Aset') {
+        switchTab('input');
+        document.getElementById('aName').focus();
+        return;
+      }
+      switchTab('input');
+      categoryManuallyEdited = false;
+      document.getElementById('editId').value = '';
+      document.getElementById('fType').value = type;
+      const nowISO = todayISO();
+      document.getElementById('fDate').value = nowISO;
+      document.getElementById('fDueDate').value = type === 'Liability' ? nextMonthOffsetISO(nowISO, 1) : '';
+      document.getElementById('fInstallments').value = '1';
+      document.getElementById('fAmount').value = '';
+      document.getElementById('fTargetAmount').value = '';
+      document.getElementById('fNote').value = '';
+      document.getElementById('fItems').value = '';
+      const defaultCat = type === 'Transfer' ? 'Transfer Antar Aset' : (type === 'Liability' ? 'Auto-Debit Tagihan' : '');
+      document.getElementById('fCategory').value = defaultCat;
+      categoryManuallyEdited = Boolean(defaultCat);
+      clearReceiptPhoto();
+      syncFormFields();
+      autoMatchCurrency();
+      runSmartSuggestFromInputs(false);
+    }
+
+    function resetForm() {
+      categoryManuallyEdited = false;
+      document.getElementById('editId').value = '';
+      document.getElementById('fType').value = 'Expense';
+      document.getElementById('fCategory').value = '';
+      document.getElementById('fAmount').value = '';
+      document.getElementById('fInstallments').value = '1';
+      document.getElementById('fTargetAmount').value = '';
+      document.getElementById('fDate').value = todayISO();
+      document.getElementById('fDueDate').value = '';
+      document.getElementById('fNote').value = '';
+      document.getElementById('fItems').value = '';
+      document.getElementById('cancelEditBtn').classList.add('hidden');
+      document.getElementById('submitBtn').textContent = 'Simpan Transaksi';
+      clearReceiptPhoto();
+      syncFormFields();
+      runSmartSuggestFromInputs(false);
+    }
+
+    function syncFormFields() {
+      const type = document.getElementById('fType').value;
+      const isTransfer = type === 'Transfer';
+      const isLiability = type === 'Liability';
+      const isEdit = Boolean(document.getElementById('editId').value);
+      document.getElementById('groupTarget').classList.toggle('hidden', !isTransfer);
+      document.getElementById('groupTargetAmount').classList.toggle('hidden', !isTransfer);
+      document.getElementById('groupItems').classList.toggle('hidden', type !== 'Expense');
+      document.getElementById('ocrSection').classList.toggle('hidden', type !== 'Expense');
+      document.getElementById('groupDueDate').classList.toggle('hidden', !isLiability);
+      document.getElementById('groupInstallments').classList.toggle('hidden', !isLiability || isEdit);
+      document.getElementById('labelDate').textContent = isLiability ? 'Tanggal Cetak Hutang / Tagihan' : 'Tanggal';
+      if (isLiability && !document.getElementById('fDueDate').value) {
+        document.getElementById('fDueDate').value = nextMonthOffsetISO(document.getElementById('fDate').value, 1);
+      }
+      document.getElementById('formTitle').textContent = 'Form Input ' + type;
+    }
+
+    function autoMatchCurrency() {
+      const sourceId = document.getElementById('fSource').value;
+      const asset = state.assets.find(a => a.id === sourceId);
+      if (asset) document.getElementById('fCurr').value = asset.currency;
+    }
+
+    function populateAssetSelects() {
+      const srcSel = document.getElementById('fSource');
+      const tgtSel = document.getElementById('fTarget');
+      const fltSel = document.getElementById('assetFilter');
+      const prevSrc = srcSel.value;
+      const prevTgt = tgtSel.value;
+      const prevFlt = fltSel.value;
+
+      const optionsHtml = state.assets
+        .map(a => `<option value="${a.id}">${escapeHtml(a.name)} (${a.currency})</option>`)
+        .join('');
+      srcSel.innerHTML = optionsHtml;
+      tgtSel.innerHTML = optionsHtml;
+
+      fltSel.innerHTML = `<option value="ALL">Semua Akun Aset</option>` + optionsHtml;
+      if (prevFlt && (prevFlt === 'ALL' || state.assets.some(a => a.id === prevFlt))) {
+        fltSel.value = prevFlt;
+      }
+
+      if (prevSrc && state.assets.some(a => a.id === prevSrc)) srcSel.value = prevSrc;
+      if (prevTgt && state.assets.some(a => a.id === prevTgt)) tgtSel.value = prevTgt;
+      else if (state.assets.length > 1) tgtSel.value = state.assets[1].id;
+    }
+
+    function handleReceiptPicked(event) {
       const file = event.target.files[0];
       if (!file) return;
       if (tempPhotoUrl) URL.revokeObjectURL(tempPhotoUrl);
@@ -1997,107 +2325,182 @@
       const img = document.getElementById('receiptPreview');
       img.src = tempPhotoUrl;
       img.classList.remove('hidden');
-      document.getElementById('ocrStatus').textContent = 'Foto diterima — memproses otomatis...';
-      await runSmartOCR(true);
+      document.getElementById('ocrStatus').textContent = 'Foto siap diproses OCR (tidak disimpan permanen).';
     }
 
     function clearReceiptPhoto() {
-      if (tempPhotoUrl) { URL.revokeObjectURL(tempPhotoUrl); tempPhotoUrl = null; }
-      processedCanvasDataUrl = null;
+      if (tempPhotoUrl) {
+        URL.revokeObjectURL(tempPhotoUrl);
+        tempPhotoUrl = null;
+      }
       const input = document.getElementById('receiptInput');
       if (input) input.value = '';
       const img = document.getElementById('receiptPreview');
-      if (img) { img.removeAttribute('src'); img.classList.add('hidden'); }
+      if (img) {
+        img.removeAttribute('src');
+        img.classList.add('hidden');
+      }
       const prevBox = document.getElementById('ocrFormattedPreview');
-      if (prevBox) { prevBox.value = ''; prevBox.classList.add('hidden'); }
-      parsedFormattedLines = [];
+      if (prevBox) {
+        prevBox.value = '';
+        prevBox.classList.add('hidden');
+      }
+      parsedFormattedItems = [];
       parsedOcrAmount = null;
-      parsedOcrCurrency = null;
       const status = document.getElementById('ocrStatus');
       if (status) status.textContent = 'Foto dihapus dari memori. Tidak ada foto yang disimpan.';
     }
 
-    async function runSmartOCR(autoApply = true) {
-      if (!tempPhotoUrl) { showToast('Pilih atau ambil foto struk dulu'); return; }
-      saveOcrEndpoint();
-      const mode = state.ocrConfig?.mode || 'smart';
-      const lang = document.getElementById('ocrLang')?.value || 'jpn+eng';
-      const statusEl = document.getElementById('ocrStatus');
-      statusEl.textContent = 'Menyiapkan gambar & membaca struk...';
+    async function translateToEnglishSmart(text) {
+      const trimmed = (text || '').trim();
+      if (!trimmed) return '';
+
+      const lower = trimmed.toLowerCase();
+      if (OFFLINE_EN_DICT[trimmed]) return OFFLINE_EN_DICT[trimmed];
+      if (OFFLINE_EN_DICT[lower]) return OFFLINE_EN_DICT[lower];
+
+      let offlineMapped = trimmed;
+      Object.entries(OFFLINE_EN_DICT).forEach(([k, v]) => {
+        if (offlineMapped.includes(k)) {
+          offlineMapped = offlineMapped.replaceAll(k, v);
+        }
+      });
+
+      const hasNonAscii = /[^\x00-\x7F]/.test(offlineMapped);
+      if (!hasNonAscii) return offlineMapped;
+
+      if (navigator.onLine) {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 4500);
+          const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(offlineMapped)}&langpair=ja|en`;
+          const res = await fetch(url, { signal: controller.signal });
+          clearTimeout(timer);
+          if (res.ok) {
+            const json = await res.json();
+            const translated = json?.responseData?.translatedText;
+            if (translated && !/MYMEMORY WARNING/i.test(translated)) {
+              return translated.trim();
+            }
+          }
+        } catch {}
+      }
+
+      return offlineMapped.replace(/[^\x20-\x7E]/g, ' ').replace(/\s+/g, ' ').trim() || 'Item';
+    }
+
+    function extractBrandAndProduct(enLabel) {
+      const clean = (enLabel || '').replace(/\s+/g, ' ').trim();
+      if (!clean) return { brand: 'Generic', product: 'Product' };
+
+      const upper = clean.toUpperCase();
+      for (const b of KNOWN_BRANDS) {
+        if (upper.includes(b)) {
+          const brandTitle = b.split(' ').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+          const rest = clean.replace(new RegExp(b, 'ig'), '').replace(/^[-–—:.\s]+|[-–—:.\s]+$/g, '').trim();
+          return { brand: brandTitle, product: rest || 'Product' };
+        }
+      }
+
+      const parts = clean.split(/[\s/]+/).filter(Boolean);
+      if (parts.length >= 2) {
+        return { brand: parts[0], product: parts.slice(1).join(' ') };
+      }
+      return { brand: 'Store Brand', product: clean };
+    }
+
+    async function runOfflineOCR() {
+      if (!tempPhotoUrl) {
+        showToast('Pilih atau ambil foto struk dulu');
+        return;
+      }
+      if (!window.Tesseract) {
+        showToast('Engine OCR belum termuat');
+        return;
+      }
+      const lang = document.getElementById('ocrLang').value || 'eng+jpn';
+      document.getElementById('ocrStatus').textContent = 'Memproses OCR & menyusun format English...';
 
       try {
-        processedCanvasDataUrl = await preprocessImageForOCR(tempPhotoUrl);
-        let rawText = '';
+        const result = await Tesseract.recognize(tempPhotoUrl, lang);
+        const rawText = (result?.data?.text || '').trim();
+        const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
 
-        if (mode === 'cloud' || mode === 'smart') {
-          rawText = await runCloudOCRIfConfigured(processedCanvasDataUrl);
+        const nums = [];
+        const candidateLines = [];
+
+        lines.forEach((line, idx) => {
+          const matches = line.match(/\d{1,3}(?:[.,\s]\d{3})+|\d+/g);
+          if (matches) {
+            matches.forEach(m => {
+              const cleaned = Number(m.replace(/[.,\s]/g, ''));
+              if (cleaned > 0) nums.push(cleaned);
+            });
+          }
+          const stripped = line.replace(/[¥$Rp0-9.,:-]/g, ' ').replace(/\s+/g, ' ').trim();
+          if (stripped.length >= 2 && !/total|subtotal|tax|change|receipt|invoice|tel|date|time/i.test(stripped)) {
+            candidateLines.push({ idx, text: stripped });
+          }
+        });
+
+        let storeInput = document.getElementById('ocrStore').value.trim();
+        if (!storeInput && candidateLines.length > 0) {
+          const topStoreRaw = candidateLines[0].text;
+          storeInput = (await translateToEnglishSmart(topStoreRaw)) || topStoreRaw;
+          document.getElementById('ocrStore').value = storeInput;
+        }
+        const storeLabel = storeInput || 'Unknown Store';
+
+        const itemLines = candidateLines.slice(1, 11);
+        const formattedList = [];
+        for (const item of itemLines) {
+          const enText = await translateToEnglishSmart(item.text);
+          const { brand, product } = extractBrandAndProduct(enText);
+          formattedList.push(`${brand} - ${product} - ${storeLabel}`);
         }
 
-        if (!rawText && mode !== 'cloud') {
-          if (!window.Tesseract) { showToast('Engine Tesseract belum termuat'); return; }
-          statusEl.textContent = 'Menjalankan Tesseract OCR (jpn+eng)...';
-          const res = await Tesseract.recognize(processedCanvasDataUrl, lang);
-          rawText = (res?.data?.text || '').trim();
-        }
-
-        if (!rawText) {
-          statusEl.textContent = 'Teks struk tidak terbaca — pastikan pencahayaan terang & lurus.';
-          return;
-        }
-
-        const parsed = parseReceiptLinesStructured(rawText, document.getElementById('ocrStore')?.value || '');
-        document.getElementById('ocrStore').value = parsed.store;
-        parsedFormattedLines = parsed.formattedLines;
-        parsedOcrAmount = parsed.totalAmount || null;
-        parsedOcrCurrency = parsed.currency || 'JPY';
+        parsedOcrAmount = nums.length ? Math.max(...nums) : null;
+        parsedFormattedItems = formattedList;
 
         const prevBox = document.getElementById('ocrFormattedPreview');
-        prevBox.value = parsed.formattedLines.join('\n');
+        prevBox.value = formattedList.join('\n');
         prevBox.classList.remove('hidden');
 
-        statusEl.textContent = `Terbaca ${parsed.formattedLines.length} baris · Total ${formatMoney(parsed.totalAmount, parsed.currency)}.`;
-
-        if (autoApply) {
-          applyOCRToForm(false);
-        }
+        document.getElementById('ocrStatus').textContent =
+          `Selesai: ${formattedList.length} item diformat (Brand - Product Type - Store)${parsedOcrAmount ? ' · Max nominal ' + parsedOcrAmount : ''}.`;
       } catch {
-        statusEl.textContent = 'Gagal memproses OCR struk.';
+        document.getElementById('ocrStatus').textContent = 'Gagal membaca struk, coba foto lebih jelas.';
       }
     }
 
-    function applyOCRToForm(clearAfter = false) {
+    function applyOCRToForm() {
       const boxVal = (document.getElementById('ocrFormattedPreview').value || '').trim();
-      const lines = boxVal ? boxVal.split('\n').map(s => s.trim()).filter(Boolean) : parsedFormattedLines;
+      const lines = boxVal
+        ? boxVal.split('\n').map(s => s.trim()).filter(Boolean)
+        : parsedFormattedItems;
 
       if (!lines.length && !parsedOcrAmount) {
-        showToast('Belum ada hasil OCR untuk diterapkan');
+        showToast('Jalankan Proses & Format EN dulu');
         return;
       }
 
-      if (parsedOcrCurrency && CURRENCIES.includes(parsedOcrCurrency)) {
-        document.getElementById('fCurr').value = parsedOcrCurrency;
-      }
-
-      if (parsedOcrAmount && parsedOcrAmount > 0) {
+      if (parsedOcrAmount && !document.getElementById('fAmount').value) {
         document.getElementById('fAmount').value = parsedOcrAmount;
       }
 
-      const itemLinesOnly = lines.filter(l => !/^Total\s*-/i.test(l));
-      if (itemLinesOnly.length) {
-        document.getElementById('fItems').value = itemLinesOnly.join('\n');
+      if (lines.length) {
+        const currentItems = document.getElementById('fItems').value.trim();
+        document.getElementById('fItems').value = [currentItems, ...lines].filter(Boolean).join(', ');
       }
 
       const storeLabel = document.getElementById('ocrStore').value.trim();
-      const firstItem = itemLinesOnly[0]?.split(' - ')[0] || 'Receipt';
-      document.getElementById('fNote').value = storeLabel ? `${storeLabel} · ${firstItem}` : firstItem;
-
-      runSmartSuggestFromInputs(true);
-      if (clearAfter) {
-        clearReceiptPhoto();
-        showToast('Data OCR diterapkan & foto dihapus');
-      } else {
-        showToast('Total, barang & kategori terisi otomatis');
+      if (!document.getElementById('fNote').value) {
+        document.getElementById('fNote').value = storeLabel ? `Receipt OCR - ${storeLabel}` : 'Receipt OCR';
       }
+
+      clearReceiptPhoto();
+      runSmartSuggestFromInputs(true);
+      showToast('Data masuk ke form, saran kategori aktif & foto dihapus');
     }
 
     function applyTransactionEffect(tx, sign = 1) {
@@ -2106,11 +2509,17 @@
       const tgt = state.assets.find(a => a.id === tx.targetAssetId);
 
       if (tx.type === 'Expense') {
-        if (src) src.balance = (Number(src.balance) || 0) - sign * convertCurrency(amt, tx.currency, src.currency);
+        if (src) {
+          src.balance = (Number(src.balance) || 0) - sign * convertCurrency(amt, tx.currency, src.currency);
+        }
       } else if (tx.type === 'Income') {
-        if (src) src.balance = (Number(src.balance) || 0) + sign * convertCurrency(amt, tx.currency, src.currency);
+        if (src) {
+          src.balance = (Number(src.balance) || 0) + sign * convertCurrency(amt, tx.currency, src.currency);
+        }
       } else if (tx.type === 'Transfer') {
-        if (src) src.balance = (Number(src.balance) || 0) - sign * convertCurrency(amt, tx.currency, src.currency);
+        if (src) {
+          src.balance = (Number(src.balance) || 0) - sign * convertCurrency(amt, tx.currency, src.currency);
+        }
         if (tgt) {
           const receivedInTxCurr = tx.targetAmount && Number(tx.targetAmount) > 0 ? Number(tx.targetAmount) : amt;
           tgt.balance = (Number(tgt.balance) || 0) + sign * convertCurrency(receivedInTxCurr, tx.currency, tgt.currency);
@@ -2204,8 +2613,14 @@
       const note = document.getElementById('fNote').value.trim();
       const rawItems = document.getElementById('fItems').value.trim();
 
-      if (!amount || amount <= 0) { showToast('Nominal harus lebih dari 0'); return; }
-      if (type === 'Transfer' && sourceAssetId === targetAssetId) { showToast('Akun asal dan tujuan harus berbeda'); return; }
+      if (!amount || amount <= 0) {
+        showToast('Nominal harus lebih dari 0');
+        return;
+      }
+      if (type === 'Transfer' && sourceAssetId === targetAssetId) {
+        showToast('Akun asal dan tujuan harus berbeda');
+        return;
+      }
 
       const dup = findDuplicateTransaction(type, currency, amount, date, editId);
       if (dup && !confirm(`Terdeteksi transaksi mirip (${dup.category} · ${formatMoney(dup.amount, dup.currency)} pada ${dup.date}). Tetap simpan?`)) {
@@ -2230,7 +2645,8 @@
       } else if (type === 'Liability' && installments > 1) {
         const groupId = 'INST-' + Date.now();
         for (let i = 0; i < installments; i++) {
-          state.transactions.unshift({
+          const stepDue = nextMonthOffsetISO(firstDueDate, i);
+          const tx = {
             id: `TX-${Date.now()}-${i + 1}`,
             groupId,
             type: 'Liability',
@@ -2241,10 +2657,11 @@
             amount,
             targetAmount: null,
             date,
-            dueDate: nextMonthOffsetISO(firstDueDate, i),
+            dueDate: stepDue,
             status: 'Pending',
             note: `${note ? note + ' · ' : ''}Cicilan ${i + 1}/${installments}`
-          });
+          };
+          state.transactions.unshift(tx);
         }
         showToast(`${installments} jadwal auto-debit bulanan dibuat`);
       } else {
@@ -2260,10 +2677,12 @@
         state.transactions.unshift(tx);
 
         if (type === 'Expense' && rawItems) {
-          const items = rawItems.split(/[,\n]/).map(s => s.trim()).filter(Boolean).filter(s => !/^BF Discount/i.test(s));
-          items.forEach(itemName => addOrUpdateStock(itemName, category, date, currency, amount / Math.max(1, items.length), 1, 1));
+          const items = rawItems.split(',').map(s => s.trim()).filter(Boolean);
+          items.forEach(itemName => addOrUpdateStock(itemName, category, date, currency, amount / items.length, 1, 1));
         }
-        showToast(type === 'Liability' ? `Hutang dicatat (auto-debit ${firstDueDate})` : 'Transaksi & stok tersimpan');
+        showToast(type === 'Liability'
+          ? `Hutang dicatat (auto-debit pelunasan ${firstDueDate})`
+          : 'Transaksi & stok tersimpan');
       }
 
       processDueAutoDebits(true);
@@ -2321,7 +2740,12 @@
         existing.balance = balance;
         showToast('Saldo aset diperbarui');
       } else {
-        state.assets.push({ id: 'AST-' + String(Date.now()).slice(-4), name, currency, balance });
+        state.assets.push({
+          id: 'AST-' + String(Date.now()).slice(-4),
+          name,
+          currency,
+          balance
+        });
         showToast('Aset baru ditambahkan');
       }
 
@@ -2356,7 +2780,9 @@
       if (jpy > 0) state.ratesToIDR.JPY = jpy;
       state.rateMeta = {
         mode: 'manual',
-        updatedAt: new Date().toLocaleString('id-ID', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+        updatedAt: new Date().toLocaleString('id-ID', {
+          day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+        })
       };
       saveState();
       closeRatesModal();
@@ -2378,10 +2804,16 @@
 
     async function pushToCloud() {
       const url = (document.getElementById('syncUrl').value || state.syncUrl || '').trim();
-      if (!url) { showToast('Isi URL Web App Google Apps Script dulu'); return; }
+      if (!url) {
+        showToast('Isi URL Web App Google Apps Script dulu');
+        return;
+      }
       state.syncUrl = url;
       saveState();
-      if (!navigator.onLine) { showToast('Sedang offline — data tersimpan lokal'); return; }
+      if (!navigator.onLine) {
+        showToast('Sedang offline — data tersimpan lokal');
+        return;
+      }
       try {
         const res = await fetch(url, {
           method: 'POST',
@@ -2389,19 +2821,30 @@
           body: JSON.stringify({ action: 'save', payload: state })
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        state.backupMeta = { ...(state.backupMeta || DEFAULT_STATE.backupMeta), lastCloudAt: new Date().toISOString() };
+        state.backupMeta = {
+          ...(state.backupMeta || DEFAULT_STATE.backupMeta),
+          lastCloudAt: new Date().toISOString()
+        };
         saveState();
         renderAll();
         showToast('Data berhasil di-upload ke awan');
-      } catch { showToast('Gagal upload ke awan'); }
+      } catch {
+        showToast('Gagal upload ke awan');
+      }
     }
 
     async function pullFromCloud() {
       const url = (document.getElementById('syncUrl').value || state.syncUrl || '').trim();
-      if (!url) { showToast('Isi URL Web App Google Apps Script dulu'); return; }
+      if (!url) {
+        showToast('Isi URL Web App Google Apps Script dulu');
+        return;
+      }
       state.syncUrl = url;
       saveState();
-      if (!navigator.onLine) { showToast('Sedang offline — tidak bisa download dari awan'); return; }
+      if (!navigator.onLine) {
+        showToast('Sedang offline — tidak bisa download dari awan');
+        return;
+      }
       try {
         const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=load');
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -2412,13 +2855,16 @@
           applyTheme(state.theme);
           applyInteractiveFxClasses();
           updatePrivacyButton();
-          syncOcrConfigInputs();
           processDueAutoDebits(true);
           saveState();
           renderAll();
           showToast('Data berhasil di-download dari awan');
-        } else { showToast('Format data awan tidak sesuai'); }
-      } catch { showToast('Gagal download dari awan'); }
+        } else {
+          showToast('Format data awan tidak sesuai');
+        }
+      } catch {
+        showToast('Gagal download dari awan');
+      }
     }
 
     function resetFilters() {
@@ -2440,7 +2886,6 @@
       const keepFx = state.interactiveFx || DEFAULT_STATE.interactiveFx;
       const keepBudgets = state.budgets || DEFAULT_STATE.budgets;
       const keepBackupMeta = state.backupMeta || DEFAULT_STATE.backupMeta;
-      const keepOcrConfig = state.ocrConfig || DEFAULT_STATE.ocrConfig;
       const keepSavedViews = state.savedViews || [];
       state = structuredClone(DEFAULT_STATE);
       state.syncUrl = keepUrl;
@@ -2448,13 +2893,11 @@
       state.interactiveFx = keepFx;
       state.budgets = keepBudgets;
       state.backupMeta = keepBackupMeta;
-      state.ocrConfig = keepOcrConfig;
       state.savedViews = keepSavedViews;
       saveState();
       applyTheme(state.theme);
       applyInteractiveFxClasses();
       updatePrivacyButton();
-      syncOcrConfigInputs();
       fetchOnlineRates(false);
       renderAll();
       showToast('Data awal dipulihkan');
@@ -2468,7 +2911,10 @@
       a.download = `money-x-backup-${todayISO()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      state.backupMeta = { ...(state.backupMeta || DEFAULT_STATE.backupMeta), lastJsonAt: new Date().toISOString() };
+      state.backupMeta = {
+        ...(state.backupMeta || DEFAULT_STATE.backupMeta),
+        lastJsonAt: new Date().toISOString()
+      };
       saveState();
       renderAll();
       showToast('Backup JSON diunduh');
@@ -2481,17 +2927,21 @@
       reader.onload = () => {
         try {
           const data = JSON.parse(reader.result);
-          if (!Array.isArray(data.assets) || !Array.isArray(data.transactions)) { showToast('Format file backup tidak valid'); return; }
+          if (!Array.isArray(data.assets) || !Array.isArray(data.transactions)) {
+            showToast('Format file backup tidak valid');
+            return;
+          }
           state = normalizeImportedState(data, state.syncUrl);
           applyTheme(state.theme);
           applyInteractiveFxClasses();
           updatePrivacyButton();
-          syncOcrConfigInputs();
           processDueAutoDebits(true);
           saveState();
           renderAll();
           showToast('Backup berhasil dipulihkan');
-        } catch { showToast('Gagal membaca file JSON'); }
+        } catch {
+          showToast('Gagal membaca file JSON');
+        }
       };
       reader.readAsText(file);
       event.target.value = '';
@@ -2510,7 +2960,10 @@
       a.download = `money-x-report-${todayISO()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      state.backupMeta = { ...(state.backupMeta || DEFAULT_STATE.backupMeta), lastCsvAt: new Date().toISOString() };
+      state.backupMeta = {
+        ...(state.backupMeta || DEFAULT_STATE.backupMeta),
+        lastCsvAt: new Date().toISOString()
+      };
       saveState();
       renderAll();
       showToast('Report CSV diunduh');
@@ -2544,7 +2997,10 @@
       const rawPct = (spent / limit) * 100;
       const pct = Math.min(100, Math.max(0, rawPct));
       const stateCls = rawPct >= 100 ? 'over' : (rawPct >= 80 ? 'warn' : '');
-      const statusText = rawPct >= 100 ? `Melebihi batas (${Math.round(rawPct)}%)` : `${Math.round(rawPct)}% · Sisa ${formatMoney(Math.max(0, limit - spent), curr)}`;
+      const statusText = rawPct >= 100
+        ? `Melebihi batas (${Math.round(rawPct)}%)`
+        : `${Math.round(rawPct)}% · Sisa ${formatMoney(Math.max(0, limit - spent), curr)}`;
+
       return `
         <div class="budget-block">
           <div class="budget-meta">
@@ -2557,7 +3013,9 @@
     }
 
     function escapeHtml(str) {
-      return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+      return String(str || '').replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
     }
 
     function renderAll() {
@@ -2570,6 +3028,7 @@
       const timeLabel = state.rateMeta?.updatedAt ? ` · ${state.rateMeta.updatedAt}` : '';
       document.getElementById('rateStatus').textContent = `Kurs: ${modeLabel}${timeLabel}`;
 
+      // Pengingat Backup Berkala di Dashboard
       const bannerEl = document.getElementById('backupReminderBanner');
       const reminderDays = Number(state.backupMeta?.reminderDays) || 7;
       const daysAgo = daysSinceBackup();
@@ -2620,6 +3079,7 @@
       document.getElementById('statDebt').textContent = formatMoney(totalDebt, disp);
       document.getElementById('statNextMonthDue').textContent = formatMoney(nextMonthDue, disp);
 
+      // Rekap & Peringatan Auto-Debit Jatuh Tempo (7 Hari)
       const upcomingDue = pendingLiabilities
         .filter(t => (t.dueDate || t.date) <= next7Days)
         .sort((a, b) => (a.dueDate || a.date).localeCompare(b.dueDate || b.date));
@@ -2647,6 +3107,7 @@
         }).join('');
       }
 
+      // Budget progress bar
       const bCurr = state.budgets?.currency || disp;
       const dailyLimit = state.budgets?.daily > 0 ? convertCurrency(state.budgets.daily, bCurr, disp) : 0;
       const monthlyLimit = state.budgets?.monthly > 0 ? convertCurrency(state.budgets.monthly, bCurr, disp) : 0;
@@ -2654,6 +3115,7 @@
         renderBudgetBarHtml('Budget Harian', todayExpense, dailyLimit, disp) +
         renderBudgetBarHtml('Budget Bulanan', monthExpense, monthlyLimit, disp);
 
+      // Net Cash Flow & Perbandingan Bulanan
       document.getElementById('cashflowMonthLabel').textContent = monthPrefix;
       document.getElementById('cfIncome').textContent = formatMoney(monthIncome, disp);
       document.getElementById('cfExpense').textContent = formatMoney(monthExpense, disp);
@@ -2663,9 +3125,13 @@
 
       const diffExp = monthExpense - prevMonthExpense;
       let compareText = `Bulan lalu (${prevMonthPrefix}): Expense ${formatMoney(prevMonthExpense, disp)} · Income ${formatMoney(prevMonthIncome, disp)}. `;
-      if (prevMonthExpense === 0 && monthExpense === 0) compareText += 'Belum ada perbandingan pengeluaran.';
-      else if (diffExp <= 0) compareText += `Pengeluaran bulan ini lebih hemat ${formatMoney(Math.abs(diffExp), disp)} dibanding bulan lalu.`;
-      else compareText += `Pengeluaran bulan ini naik ${formatMoney(diffExp, disp)} dibanding bulan lalu.`;
+      if (prevMonthExpense === 0 && monthExpense === 0) {
+        compareText += 'Belum ada perbandingan pengeluaran.';
+      } else if (diffExp <= 0) {
+        compareText += `Pengeluaran bulan ini lebih hemat ${formatMoney(Math.abs(diffExp), disp)} dibanding bulan lalu.`;
+      } else {
+        compareText += `Pengeluaran bulan ini naik ${formatMoney(diffExp, disp)} dibanding bulan lalu.`;
+      }
       document.getElementById('monthCompareBox').textContent = compareText;
 
       const chartEl = document.getElementById('categoryChart');
@@ -2682,7 +3148,10 @@
           const pct = Math.max(4, Math.round((val / maxVal) * 100));
           return `
             <div class="bar-row">
-              <div class="bar-label"><span>${escapeHtml(cat)}</span><span>${formatMoney(val, disp)}</span></div>
+              <div class="bar-label">
+                <span>${escapeHtml(cat)}</span>
+                <span>${formatMoney(val, disp)}</span>
+              </div>
               <div class="bar-track"><div class="bar-fill" style="width:${pct}%;"></div></div>
             </div>
           `;
@@ -2696,12 +3165,15 @@
         if (!assetEntries.length) {
           chartEl.innerHTML = `<div class="asset-meta">Belum ada data grafik untuk ditampilkan.</div>`;
         } else {
-          const maxVal = Math.max(...assetEntries.map(e => e.val), 1);
+          const maxVal = Math.max(...assetEntries.map(e => e[1]), 1);
           chartEl.innerHTML = assetEntries.map(x => {
             const pct = Math.max(4, Math.round((x.val / maxVal) * 100));
             return `
               <div class="bar-row">
-                <div class="bar-label"><span>${escapeHtml(x.name)}</span><span>${formatMoney(x.val, disp)}</span></div>
+                <div class="bar-label">
+                  <span>${escapeHtml(x.name)}</span>
+                  <span>${formatMoney(x.val, disp)}</span>
+                </div>
                 <div class="bar-track"><div class="bar-fill" style="width:${pct}%;"></div></div>
               </div>
             `;
@@ -2771,13 +3243,18 @@
           const accLabel = t.type === 'Transfer' && tgtName ? `${srcName} → ${tgtName}` : srcName;
           const isPendingLiability = t.type === 'Liability' && t.status !== 'Paid';
           const isPaidLiability = t.type === 'Liability' && t.status === 'Paid';
-          const dueInfo = t.type === 'Liability' ? ` · Pelunasan: ${t.dueDate || '-'} (${isPaidLiability ? 'Lunas/Terdebit' : 'Menunggu Auto-Debit'})` : '';
+          const dueInfo = t.type === 'Liability'
+            ? ` · Pelunasan: ${t.dueDate || '-'} (${isPaidLiability ? 'Lunas/Terdebit' : 'Menunggu Auto-Debit'})`
+            : '';
           const peekMsg = `${t.type} · ${t.category}: ${formatMoney(t.amount, t.currency)} (${accLabel})`;
 
           return `
             <div class="tx-item" onclick="peekSummary('${escapeHtml(peekMsg).replace(/'/g, "\\'")}')">
               <div>
-                <div class="asset-name">${escapeHtml(t.category)} <span class="tag ${tagClass}">${t.type}</span></div>
+                <div class="asset-name">
+                  ${escapeHtml(t.category)}
+                  <span class="tag ${tagClass}">${t.type}</span>
+                </div>
                 <div class="asset-meta">Cetak: ${t.date} · ${escapeHtml(accLabel)}${dueInfo}${t.note ? ' · ' + escapeHtml(t.note) : ''}</div>
               </div>
               <div class="asset-right" onclick="event.stopPropagation()">
@@ -2814,7 +3291,10 @@
         grocEl.innerHTML = filteredGroceries.slice(0, 40).map(g => {
           const stockNum = Number(g.stock) || 0;
           const minNum = Number(g.minStock) ?? 1;
-          const badge = stockNum === 0 ? `<span class="tag tag-empty">Habis</span>` : (stockNum <= minNum ? `<span class="tag tag-low">Menipis</span>` : '');
+          const badge = stockNum === 0
+            ? `<span class="tag tag-empty">Habis</span>`
+            : (stockNum <= minNum ? `<span class="tag tag-low">Menipis</span>` : '');
+
           return `
             <div class="tx-item">
               <div>
@@ -2845,7 +3325,6 @@
     applyTheme(state.theme);
     applyInteractiveFxClasses();
     updatePrivacyButton();
-    syncOcrConfigInputs();
     syncPeriodButtons();
     document.getElementById('fDate').value = todayISO();
     processDueAutoDebits(true);
